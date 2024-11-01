@@ -2,9 +2,9 @@
 User model for interacting with the users table in the database.
 """
 
-import hashlib
 from typing import Optional
 from datetime import datetime
+import bcrypt
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import Session
 from config.database import Base
@@ -41,21 +41,18 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     @classmethod
-    def authenticate(cls, db: Session, username: str, password: str) -> Optional["User"]:
-        """Authenticate a user by username and password."""
-        user = db.query(cls).filter_by(username=username).first()
-        if user is None:
-            return None
-        if user.password == cls.create_password(password): # type: ignore
+    def authenticate(cls, db: Session, email: str, password: str) -> Optional["User"]:
+        """Authenticate a user by email and password."""
+        user = db.query(cls).filter_by(email=email).first()
+        if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
             return user
         return None
 
     @classmethod
     def create_password(cls, password: str) -> str:
-        """Hash a password using MD5."""
-        h = hashlib.md5()
-        h.update(password.encode('utf8'))
-        return h.hexdigest()
+        """Hash a password using bcrypt."""
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        return hashed_password.decode('utf-8')
 
     def __repr__(self):
         return f"<User(username={self.username})>"
