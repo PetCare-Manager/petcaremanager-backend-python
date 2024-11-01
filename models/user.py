@@ -1,12 +1,12 @@
 """
-User model for interacting with the users table in the database.
+User model for interacting with the user table in the database.
 """
 
 from typing import Optional
 from datetime import datetime
 import bcrypt
 from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, relationship
 from config.database import Base
 
 
@@ -15,19 +15,12 @@ class User(Base):
     This class defines the structure of the user entity and includes methods for
     authentication and password management.
 
-    Attributes:
-        id (int): The unique identifier for each user.
-        username (str): The unique username of the user. It may be None.
-        email (str): The email address of the user. It must be unique and is required.
-        password (str): The hashed password of the user. It is required and stored securely.
-        created_at (datetime): The timestamp of when the user was created.
-        
     Methods:
         authenticate(cls, db: Session, username: str, password: str) -> Optional["User"]:
             Class method to authenticate a user using their username and password.
             
         create_password(cls, password: str) -> str:
-            Class method to hash a password using MD5. It is recommended to use a more secure hashing algorithm.
+            Class method to hash a password.
             
         __repr__(self) -> str:
             Returns a string representation of the User object.
@@ -39,6 +32,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String(50), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
+
+    pets = relationship("Pet", back_populates="owner")
 
     @classmethod
     def authenticate(cls, db: Session, email: str, password: str) -> Optional["User"]:
