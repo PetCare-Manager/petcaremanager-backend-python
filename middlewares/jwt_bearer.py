@@ -30,6 +30,9 @@ class JWTBearer(HTTPBearer):
             raise HTTPException(status_code=403, detail="Invalid or missing credentials")
         try:
             data = validate_token(auth.credentials)
+            if "email" not in data:
+                raise HTTPException(status_code=403, detail="Invalid credentials")
+            request.state.email = data["email"]
             if not data:
                 raise HTTPException(status_code=403, detail="Invalid or expired token")
         except Exception as e:

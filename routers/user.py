@@ -2,18 +2,22 @@
 API Router for User Management
 Provides endpoints for user registration, retrieval, and authentication.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from config.database import get_db
-from schemas.user import UserLogin, User
+from middlewares.jwt_bearer import JWTBearer
+from schemas.user import UserLogin, User, UserUpdate
 from models.user import User as UserModel
 from services.user import UserService
 from utils.jwt_manager import create_token
 
 user_router = APIRouter()
 
-@user_router.post("/users/", response_model=User, status_code=status.HTTP_201_CREATED, tags=["User"])
+@user_router.post("/users/",
+        response_model=User,
+        status_code=status.HTTP_201_CREATED, tags=["User"]
+    )
 def create_user(user: UserLogin, db: Session = Depends(get_db)):
     """
     Registers a new user with the provided email and password.
@@ -28,6 +32,7 @@ def create_user(user: UserLogin, db: Session = Depends(get_db)):
     new_user = user_service.create_user(user)
     return new_user
 
+
 @user_router.get("/users/{user_id}", response_model=User, tags=["User"])
 def get_user(user_id: int, db: Session = Depends(get_db)):
     """
@@ -41,6 +46,64 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+
+@user_router.patch("/users/",
+        response_model=User, tags=["User"],
+        dependencies=[Depends(JWTBearer())]
+    )
+def update_user(user_update: UserUpdate, request: Request,  db: Session = Depends(get_db)):
+    """
+    Updates the user's information, such as username.
+    Raises:
+        HTTPException: If the user is not found.
+    """
+    user_service = UserService(db)
+    user_email = request.state.email
+    user = user_service.get_user_by_email(user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user_update.username:
+        user.username = user_update.username #type: ignore
+    db.commit()
+    db.refresh(user)
+    return user
+
+@user_router.delete("/users/{user_id}",
+        status_code=status.HTTP_204_NO_CONTENT, tags=["User"],
+        dependencies=[Depends(JWTBearer())]
+    )
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """
+    Deletes a user by their unique ID. 
+    Raises:
+        HTTPException: If the user is not found.
+    """
+    user_service = UserService(db)
+    user = user_service.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_service.delete_user(user_id)
+    db.commit()
+    return None
+
+@user_router.delete("/users/me/",
+        status_code=status.HTTP_204_NO_CONTENT, tags=["User"],
+        dependencies=[Depends(JWTBearer())]
+    )
+def delete_me(request: Request, db: Session = Depends(get_db)):
+    """
+    Deletes the authenticated user, we get ID from the token.
+    """
+    user_service = UserService(db)
+    user_email = request.state.email
+    user = user_service.get_user_by_email(user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_service.delete_user(int(user.id)) # type: ignore
+    db.commit()
+    return None
 
 @user_router.post("/login", tags=["Auth"])
 def login(user: UserLogin, db: Session = Depends(get_db)):
