@@ -2,10 +2,10 @@
 API Router for User Management
 Provides endpoints for user registration, retrieval, and authentication.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from config.database import SessionLocal
+from config.database import get_db
 from schemas.user import UserLogin, User
 from models.user import User as UserModel
 from services.user import UserService
@@ -13,16 +13,7 @@ from utils.jwt_manager import create_token
 
 user_router = APIRouter()
 
-
-def get_db():
-    """Provides a database session for dependency injection."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@user_router.post("/users/", response_model=User, tags=["User"])
+@user_router.post("/users/", response_model=User, status_code=status.HTTP_201_CREATED, tags=["User"])
 def create_user(user: UserLogin, db: Session = Depends(get_db)):
     """
     Registers a new user with the provided email and password.
