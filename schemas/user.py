@@ -2,7 +2,7 @@
 Definition of schemas for User
 """
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class UserBase(BaseModel):
     """Base schema for a user with the essential attribute email."""
@@ -15,9 +15,8 @@ class UserLogin(UserBase):
 class User(UserBase):
     """Schema for returning user information, includes id."""
     id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
 
 class UserInfo(User):
     """Detailed schema for returning user information, includes username and created_at."""
