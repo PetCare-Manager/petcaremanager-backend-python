@@ -14,5 +14,5 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 database_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(base_dir, '../test.db')}")
 
 engine = create_engine(database_url, echo=True)
-Session = sessionmaker(bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
