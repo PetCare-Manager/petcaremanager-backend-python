@@ -42,7 +42,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
-@user_router.post("/login", tags=["auth"])
+@user_router.post("/login", tags=["Auth"])
 def login(user: UserLogin, db: Session = Depends(get_db)):
     """
     Authenticates a user and returns a JWT token if successful.

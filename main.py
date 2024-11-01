@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from config.database import engine, Base
 from middlewares.cors import setup_cors
 from routers.user import user_router
+from routers.password import pass_router
+
 
 app = FastAPI(
     title="PetCare Manager",
@@ -15,7 +17,7 @@ app = FastAPI(
 setup_cors(app)
 
 app.include_router(user_router, prefix="/api")
-
+app.include_router(pass_router, prefix="/api/auth/password", tags=["Auth"])
 
 @app.get("/health", tags=["Health"])
 def health_check():
