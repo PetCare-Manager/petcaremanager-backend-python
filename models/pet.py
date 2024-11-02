@@ -30,7 +30,6 @@ class Pet(Base):
     # events = relationship("Event", back_populates="pet", cascade="all, delete-orphan")
 
 
-
 class MedicalInfo(Base):
     """Medical information for a pet, including medication, allergies, and vet information."""
     __tablename__ = "medical_info"
@@ -41,8 +40,8 @@ class MedicalInfo(Base):
     medication_purchase_frequency = Column(Integer)
     vet_card_image_url = Column(String)
     qr_chip_image_url = Column(String)
-    allergies = Column(String)  # Puedes almacenar como una lista separada por comas
-    illness = Column(String)  # Similar a allergies
+    allergies = Column(String)
+    illness = Column(String)
 
     pet = relationship("Pet", back_populates="medical_info")
 
