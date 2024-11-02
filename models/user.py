@@ -33,7 +33,7 @@ class User(Base):
     password = Column(String(50), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
 
-    pets = relationship("Pet", back_populates="owner")
+    pets = relationship("Pet", back_populates="owner", cascade="all, delete-orphan")
 
     @classmethod
     def authenticate(cls, db: Session, email: str, password: str) -> Optional["User"]:
