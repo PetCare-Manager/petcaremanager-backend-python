@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import datetime
 import bcrypt
 from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy.orm import Session, relationship
+from sqlalchemy.orm import Session
 from config.database import Base
 
 
@@ -32,8 +32,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String(50), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
-
-    pets = relationship("Pet", back_populates="owner")
 
     @classmethod
     def authenticate(cls, db: Session, email: str, password: str) -> Optional["User"]:
