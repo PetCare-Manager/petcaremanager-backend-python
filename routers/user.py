@@ -15,12 +15,13 @@ from utils.jwt_manager import create_token
 user_router = APIRouter()
 
 @user_router.post("/users/",
-        response_model=User,
-        status_code=status.HTTP_201_CREATED, tags=["User"]
-    )
+    response_model=User,
+    status_code=status.HTTP_201_CREATED,
+    tags=["User"]
+)
 def create_user(user: UserLogin, db: Session = Depends(get_db)):
     """
-    Registers a new user with the provided email and password.
+    Creates a new user with the provided email and password.
     Raises:
         HTTPException: If the email is already registered.
     """
@@ -33,7 +34,10 @@ def create_user(user: UserLogin, db: Session = Depends(get_db)):
     return new_user
 
 
-@user_router.get("/users/{user_id}", response_model=User, tags=["User"])
+@user_router.get("/users/{user_id}",
+    response_model=User,
+    tags=["User"]
+)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     """
     Retrieves a user by their unique ID.
@@ -48,9 +52,9 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @user_router.patch("/users/",
-        response_model=User, tags=["User"],
-        dependencies=[Depends(JWTBearer())]
-    )
+    response_model=User, tags=["User"],
+    dependencies=[Depends(JWTBearer())]
+)
 def update_user(user_update: UserUpdate, request: Request,  db: Session = Depends(get_db)):
     """
     Updates the user's information, such as username.
@@ -69,9 +73,10 @@ def update_user(user_update: UserUpdate, request: Request,  db: Session = Depend
     return user
 
 @user_router.delete("/users/{user_id}",
-        status_code=status.HTTP_204_NO_CONTENT, tags=["User"],
-        dependencies=[Depends(JWTBearer())]
-    )
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(JWTBearer())],
+    tags=["User"]
+)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     """
     Deletes a user by their unique ID. 
@@ -79,18 +84,16 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
         HTTPException: If the user is not found.
     """
     user_service = UserService(db)
-    user = user_service.get_user_by_id(user_id)
-    if not user:
+    success = user_service.delete_user(user_id)
+    if not success:
         raise HTTPException(status_code=404, detail="User not found")
-
-    user_service.delete_user(user_id)
-    db.commit()
     return None
 
 @user_router.delete("/users/me/",
-        status_code=status.HTTP_204_NO_CONTENT, tags=["User"],
-        dependencies=[Depends(JWTBearer())]
-    )
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(JWTBearer())],
+    tags=["User"]
+)
 def delete_me(request: Request, db: Session = Depends(get_db)):
     """
     Deletes the authenticated user, we get ID from the token.
@@ -114,7 +117,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     """
     authenticated_user = UserModel.authenticate(db, user.email, user.password)
     if authenticated_user:
-        token: str = create_token({"email": user.email})
+        user_email: str = str(authenticated_user.email)
+        user_id: int = int(authenticated_user.id)  # type: ignore
+        token: str = create_token(user_id, user_email)
         return JSONResponse(status_code=200, content={"token": token})
 
     raise HTTPException(status_code=400, detail="Invalid credentials")

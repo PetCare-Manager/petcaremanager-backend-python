@@ -46,11 +46,11 @@ class UserService:
         self.db.refresh(user)
         return user
 
-    def delete_user(self, _id: int) -> None:
+    def delete_user(self, _id: int) -> bool:
         """Delete user by given id."""
         user = self.get_user_by_id(_id)
         if not user:
-            return None
+            return False
         self.db.delete(user)
         self.db.commit()
-        return None
+        return True

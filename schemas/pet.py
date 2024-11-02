@@ -1,6 +1,9 @@
+"""
+Definition of schemas for Pet
+"""
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional
+from pydantic import BaseModel, ConfigDict, field_validator
 
 class PetBase(BaseModel):
     name: str
@@ -11,7 +14,8 @@ class PetBase(BaseModel):
     neutered: bool
 
     @field_validator("age")
-    def age_must_be_positive(self, value: int):
+    @classmethod
+    def age_must_be_positive(cls, value: int):
         if value <= 0:
             raise ValueError("Age must be greater than 0")
         return value

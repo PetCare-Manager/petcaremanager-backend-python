@@ -42,11 +42,11 @@ class PetService:
         self.db.refresh(pet)
         return pet
 
-    def delete_pet(self, pet_id: int) -> None:
+    def delete_pet(self, pet_id: int) -> bool:
         """Delete pet by given ID."""
         pet = self.get_pet_by_id(pet_id)
         if not pet:
-            return None
+            return False
         self.db.delete(pet)
         self.db.commit()
-        return None
+        return True
