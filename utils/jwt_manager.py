@@ -5,16 +5,21 @@ SECRET_KEY from ENV
 
 import os
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Any, Dict
 from jwt import encode, decode, ExpiredSignatureError, InvalidTokenError # type: ignore
 from dotenv import load_dotenv
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "my_default_secret_key")
 
-def create_token(data: Dict[str, str]) -> str:
-    """Creates a JWT token from the provided data."""
-    token: str = encode(payload=data, key=SECRET_KEY, algorithm="HS256")
+def create_token(user_id: int, email: str) -> str:
+    """Creates a JWT token with user_id and email."""
+    payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "email": email,
+        "exp": datetime.now() + timedelta(hours=1)
+    }
+    token: str = encode(payload, key=SECRET_KEY, algorithm="HS256")
     return token
 
 def validate_token(token: str) -> Dict[str, str]:

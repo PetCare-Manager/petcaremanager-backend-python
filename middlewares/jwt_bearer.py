@@ -26,14 +26,16 @@ class JWTBearer(HTTPBearer):
     """
     async def __call__(self, request: Request):
         auth = await super().__call__(request)
+        # Ensure token exists
         if not auth or not auth.credentials:
             raise HTTPException(status_code=403, detail="Invalid or missing credentials")
         try:
             data = validate_token(auth.credentials)
-            if "email" not in data:
+            email = data.get("email")
+            user_id = data.get("user_id")
+            if not email or not user_id:
                 raise HTTPException(status_code=403, detail="Invalid credentials")
-            request.state.email = data["email"]
-            if not data:
-                raise HTTPException(status_code=403, detail="Invalid or expired token")
+            request.state.email = email
+            request.state.user_id = user_id
         except Exception as e:
             raise HTTPException(status_code=403, detail=str(e)) from e

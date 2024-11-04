@@ -1,9 +1,7 @@
 """"
 Implementation of the User service to interact with the database.
 """
-# from typing import List
 from typing import Optional
-
 from sqlalchemy.orm import Session
 from models.user import User as UserModel
 from schemas.user import UserLogin, UserUpdate
@@ -34,7 +32,7 @@ class UserService:
             self.db.refresh(new_user)
             return new_user
         except Exception as e:
-            self.db.rollback()  
+            self.db.rollback()
             raise RuntimeError(f"An error occurred while creating the user: {e}") from e
 
     def update_user(self, _id: int, user_update: UserUpdate) ->  Optional[UserModel]:
@@ -42,17 +40,17 @@ class UserService:
         user = self.get_user_by_id(_id)
         if not user:
             return None
-        if user.username is not None:
-            user.username = user_update.username # type: ignore
+        for key, value in user_update.model_dump(exclude_unset=True).items():
+            setattr(user, key, value)
         self.db.commit()
         self.db.refresh(user)
         return user
 
-    def delete_user(self, _id: int) -> None:
+    def delete_user(self, _id: int) -> bool:
         """Delete user by given id."""
         user = self.get_user_by_id(_id)
         if not user:
-            return None
+            return False
         self.db.delete(user)
         self.db.commit()
-        return None
+        return True
