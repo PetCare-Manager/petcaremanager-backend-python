@@ -25,9 +25,9 @@ class Pet(Base):
 
     owner = relationship("User", back_populates="pets")
 
-    # medical_info = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
-    # photos = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")
-    # events = relationship("Event", back_populates="pet", cascade="all, delete-orphan")
+    medical_info = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
+    photos = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")
+    events = relationship("Event", back_populates="pet", cascade="all, delete-orphan")
 
 
 class MedicalInfo(Base):
