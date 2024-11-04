@@ -9,7 +9,6 @@ This is the backend for the PetCareManager application, built with FastAPI.
 - [Running the Application](#running-the-application)
 - [Running Tests](#running-tests)
 - [API Documentation](#api-documentation)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Features
@@ -52,13 +51,16 @@ This is the backend for the PetCareManager application, built with FastAPI.
     ```env
     DATABASE_URL=sqlite:///./test.db
     SECRET_KEY=your_secret_key
+    SMTP_USER=tu_correo@example.com
+    SMTP_PASSWORD=tu_contraseña_de_aplicación
+    SMTP_SERVER=smtp.example.com
     ```
 
 
 ## Running the Application
 1. **Start the FastAPI server:**
     ```sh
-    uvicorn app.main:app --reload
+    uvicorn main:app --reload
     ```
 
 2. **Access the application:**

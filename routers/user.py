@@ -33,17 +33,36 @@ def create_user(user: UserLogin, db: Session = Depends(get_db)):
     new_user = user_service.create_user(user)
     return new_user
 
+# FOR ADMIN
+# @user_router.get("/users/{user_id}",
+#     response_model=User,
+#     tags=["User"]
+# )
+# def get_user(user_id: int, db: Session = Depends(get_db)):
+#     """
+#     Retrieves a user by their unique ID.
+#     Raises:
+#         HTTPException: If the user is not found.
+#     """
+#     user_service = UserService(db)
+#     user = user_service.get_user_by_id(user_id)
+#     if user is None:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return user
 
-@user_router.get("/users/{user_id}",
+
+@user_router.get("/users/",
     response_model=User,
-    tags=["User"]
+    tags=["User"],
+    dependencies=[Depends(JWTBearer())]
 )
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(request: Request, db: Session = Depends(get_db)):
     """
-    Retrieves a user by their unique ID.
+    Retrieves the authenticated user's information.
     Raises:
         HTTPException: If the user is not found.
     """
+    user_id = request.state.user_id
     user_service = UserService(db)
     user = user_service.get_user_by_id(user_id)
     if user is None:
@@ -72,22 +91,23 @@ def update_user(user_update: UserUpdate, request: Request,  db: Session = Depend
     db.refresh(user)
     return user
 
-@user_router.delete("/users/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(JWTBearer())],
-    tags=["User"]
-)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    """
-    Deletes a user by their unique ID. 
-    Raises:
-        HTTPException: If the user is not found.
-    """
-    user_service = UserService(db)
-    success = user_service.delete_user(user_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="User not found")
-    return None
+# FOR ADMIN
+# @user_router.delete("/users/{user_id}",
+#     status_code=status.HTTP_204_NO_CONTENT,
+#     dependencies=[Depends(JWTBearer())],
+#     tags=["User"]
+# )
+# def delete_user(user_id: int, db: Session = Depends(get_db)):
+#     """
+#     Deletes a user by their unique ID. 
+#     Raises:
+#         HTTPException: If the user is not found.
+#     """
+#     user_service = UserService(db)
+#     success = user_service.delete_user(user_id)
+#     if not success:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return None
 
 @user_router.delete("/users/me/",
     status_code=status.HTTP_204_NO_CONTENT,

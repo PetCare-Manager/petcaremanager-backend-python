@@ -40,5 +40,19 @@ def send_password_reset_email(email: str, reset_token: str):
             server.login(smtp_user, smtp_password)
             server.sendmail(smtp_user, email, em.as_string())
         print("Password reset email sent successfully!")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"Failed to authenticate with the SMTP server: {e}")
+    except smtplib.SMTPConnectError as e:
+        print(f"Failed to connect to the SMTP server: {e}")
+    except smtplib.SMTPHeloError as e:
+        print(f"SMTP server refused HELO message: {e}")
+    except smtplib.SMTPSenderRefused as e:
+        print(f"SMTP server refused sender address: {e}")
+    except smtplib.SMTPRecipientsRefused as e:
+        print(f"SMTP server refused recipient addresses: {e}")
+    except smtplib.SMTPDataError as e:
+        print(f"SMTP server replied with an unexpected error code: {e}")
+    except smtplib.SMTPNotSupportedError as e:
+        print(f"SMTP command or option not supported by the server: {e}")
+    except smtplib.SMTPException as e:
+        print(f"An SMTP error occurred: {e}")

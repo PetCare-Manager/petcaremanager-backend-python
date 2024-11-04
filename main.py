@@ -11,7 +11,6 @@ from routers.user import user_router
 from routers.password import pass_router
 from routers.pet import pet_router
 
-
 app = FastAPI(
     title="PetCare Manager",
     description="Manage your pets schedules, appointments, medicine",
