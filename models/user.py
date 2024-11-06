@@ -5,8 +5,8 @@ User model for interacting with the user table in the database.
 from typing import Optional
 from datetime import datetime
 import bcrypt
-from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy.orm import Session, relationship
+from sqlalchemy import String
+from sqlalchemy.orm import Session, relationship, Mapped, mapped_column
 from config.database import Base
 
 
@@ -27,11 +27,13 @@ class User(Base):
     """
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password = Column(String(50), nullable=False)
-    created_at = Column(DateTime, default=datetime.now)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    # username: Mapped[str] = mapped_column(String(50), unique=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    password: Mapped[str] = mapped_column(String(50), nullable=False)
+    name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
 
     pets = relationship("Pet", back_populates="owner", cascade="all, delete-orphan")
 
