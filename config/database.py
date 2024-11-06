@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
-database_url = os.getenv("DB_URL", f"sqlite:///{os.path.join(base_dir, '../develop.db')}")
-db_url_develop = f"sqlite:///{os.path.join(base_dir, '../develop.db')}"
+database_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(base_dir, '../develop.db')}")
 
 # if os.getenv("TESTING") == "1":
 #     database_url = "sqlite:///:memory:"

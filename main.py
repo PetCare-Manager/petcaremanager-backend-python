@@ -1,5 +1,5 @@
 """
-PetCareManager Backend built FastAPI 
+PetCareManager Backend built with FastAPI 
 """
 
 from fastapi import FastAPI
