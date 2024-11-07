@@ -5,21 +5,22 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 
 load_dotenv()
-USER = os.getenv("SMTP_USER")
-PASSWORD = os.getenv("SMTP_PASSWORD")
-SERVER = os.getenv("SMTP_SERVER")
+USER = os.getenv("MAIL_USERNAME")
+PASSWORD = os.getenv("MAIL_PASSWORD")
+SERVER = os.getenv("MAIL_HOST")
+PORT = os.getenv("MAIL_PORT")
 assert USER and PASSWORD and SERVER, "SMTP credentials not set"
 
 def send_password_reset_email(email: str, reset_token: str):
     """ Sends a password reset email to the user."""
-    smtp_port:int = 465
-    smtp_user: str = USER #type: ignore
-    smtp_password: str = PASSWORD #type: ignore
-    smtp_server: str = SERVER #type: ignore
+    MAIL_PORT = PORT
+    MAIL_USERNAME: str = USER #type: ignore
+    MAIL_PASSWORD: str = PASSWORD #type: ignore
+    MAIL_HOST: str = SERVER #type: ignore
 
     reset_link = f"https://yourapp.com/reset-password?token={reset_token}"
     em = EmailMessage()
-    em["From"] = smtp_user #type: ignore
+    em["From"] = MAIL_USERNAME #type: ignore
     em["To"] = email
     em["Subject"] = "Password Reset Request"
 
@@ -36,9 +37,9 @@ def send_password_reset_email(email: str, reset_token: str):
 
     context = ssl.create_default_context()
     try:
-        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, email, em.as_string())
+        with smtplib.SMTP_SSL(MAIL_HOST, MAIL_PORT, context=context) as server:
+            server.login(MAIL_USERNAME, MAIL_PASSWORD)
+            server.sendmail(MAIL_USERNAME, email, em.as_string())
         print("Password reset email sent successfully!")
     except smtplib.SMTPAuthenticationError as e:
         print(f"Failed to authenticate with the SMTP server: {e}")

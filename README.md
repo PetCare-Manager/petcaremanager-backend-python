@@ -1,79 +1,37 @@
 # PetCareManager Backend (Python)
 
-This is the backend for the PetCareManager application, built with FastAPI.
-
-## Table of Contents
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Running Tests](#running-tests)
-- [API Documentation](#api-documentation)
-- [License](#license)
-
-## Features
-- APIRest 
-- SQLAlchemy for database interactions
-- SQLite for database
-- Pydantic for data validation
-- JWT for authentication
-
 ## Requirements
+- Docker _(in progress)_
+- make _(in progress)_
 - Python 3.8+
 - pip (Python package installer)
 
-## Installation
+## Setup
 
 1. **Clone the repository:**
+2. **Create a virtual environment for the project:**
 
     ```sh
-    git clone https://github.com/yourusername/petcaremanager-backend-python.git
-    cd petcaremanager-backend-python
+    python -m venv venv
     ```
-
-2. **Create and activate a virtual environment:**
-
+3. **Activate the virtual environment**
+    
     ```sh
     python -m venv venv
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
     ```
-
+    
 3. **Install the dependencies:**
 
     ```sh
-    pip install -r requirements.txt
+    make build
     ```
 
 4. **Set up environment variables:**
 
-    Create a `.env` file in the root directory and add the following:
+    Create a `.env` file in the root directory
 
-    ```env
-    DATABASE_URL=sqlite:///./test.db
-    SECRET_KEY=your_secret_key
-    SMTP_USER=tu_correo@example.com
-    SMTP_PASSWORD=tu_contraseña_de_aplicación
-    SMTP_SERVER=smtp.example.com
-    ```
-
-
-## Running the Application
-1. **Start the FastAPI server:**
+5. **Start the project**
     ```sh
-    uvicorn main:app --reload
+    make start
     ```
-
-2. **Access the application:**
-    Open your browser and go to `http://127.0.0.1:8000`.
-
-
-
-## API Documentation
-
-FastAPI automatically generates interactive API documentation. You can access it at:
-
-- Swagger UI: `http://127.0.0.1:8000/docs`
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
