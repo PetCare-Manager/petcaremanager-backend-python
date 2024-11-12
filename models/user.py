@@ -34,7 +34,7 @@ class User(Base):
     name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
-
+    name: Mapped[str] = mapped_column(String, nullable=True )
     pets = relationship("Pet", back_populates="owner", cascade="all, delete-orphan")
 
     @classmethod
