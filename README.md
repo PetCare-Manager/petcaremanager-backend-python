@@ -1,4 +1,4 @@
-# PetCareManager Backend (Python)
+# PetCareManager Backend
 
 ## Requirements
 - make
