@@ -1,0 +1,27 @@
+---
+
+services:
+  django:
+    env_file:
+      - .env
+      - ../../.env
+    container_name: ${COMPOSE_PROJECT_NAME}
+    build:
+      context: ./../../
+      dockerfile: docker/local/Dockerfile
+      args:
+        - PYTHON_IMAGE=${PYTHON_BASE_IMAGE}
+        - PYTHON_PORT=${PYTHON_INTERNAL_PORT}
+    image: ${PYTHON_BASE_IMAGE}
+    ports:
+      - ${PYTHON_EXTERNAL_PORT}:${PYTHON_INTERNAL_PORT}
+    volumes:
+      - ../../app:/app/
+    restart: 'no'
+
+    labels:
+      custom.project_name: ${COMPOSE_PROJECT_NAME}
+      custom.components: django
+    command: uvicorn main:app --host 0.0.0.0 --reload
+
+...

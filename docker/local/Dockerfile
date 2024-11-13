@@ -1,20 +1,26 @@
-# Usa una imagen de Python como base
-FROM python:3.10-slim
+ARG PYTHON_IMAGE=python:3.10
+ARG PYTHON_PORT=8000
+FROM ${PYTHON_IMAGE}
 
-# Establece el directorio de trabajo dentro del contenedor
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set the working directory in the container
 WORKDIR /app
 
-# Copia el archivo requirements.txt al contenedor
-COPY requirements.txt .
+# Copy the requirements file into the container
+COPY requirements.txt /app/
 
-# Instala las dependencias de Python
-RUN pip install --no-cache-dir -r requirements.txt
+# Install any needed packages specified in requirements.txt
+RUN pip install -r requirements.txt
 
-# Copia el resto del código de la aplicación al contenedor
-COPY . .
+# Copy the contents of the Django project into the container
+COPY app/ /app/
+COPY .env /app/.env
 
-# Expone el puerto que usará la aplicación
-EXPOSE 8000
+# Expose the port your app runs on
+EXPOSE ${PYTHON_PORT}
 
-# Comando para iniciar la aplicación
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run your application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
