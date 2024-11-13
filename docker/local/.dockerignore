@@ -1,5 +1,45 @@
-__pycache__
+# Python cache and temporary files
+__pycache__/
 *.pyc
 *.pyo
+*.pyd
 *.db
+
+# Virtual environment and Python dependencies
 venv/
+*.egg-info/
+.venv/
+pip-wheel-metadata/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs and debug output
+*.log
+logs/
+debug.log
+
+# Byte-compiled, coverage, and pytest cache
+coverage.xml
+coverage/
+*.cover
+*.coverage
+.cache/
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Docker-related
+Dockerfile*
+docker-compose*.yml
+
+# Static and media files (if generated at runtime)
+staticfiles/
+media/
+
