@@ -16,5 +16,6 @@
 3. **Build the project!**
     ~~~sh
     make build
+    make urls
     ~~~
 
