@@ -28,7 +28,10 @@ def create_user(user: UserLogin, db: Session = Depends(get_db)):
     user_service = UserService(db)
     db_user = user_service.get_user_by_email(user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "El correo electrónico ya está registrado"}
+        )
     user.password = UserModel.create_password(user.password)
     new_user = user_service.create_user(user)
     return new_user
@@ -66,7 +69,10 @@ def get_user(request: Request, db: Session = Depends(get_db)):
     user_service = UserService(db)
     user = user_service.get_user_by_id(user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Usuario no encontrado"}
+        )
     return user
 
 
@@ -81,15 +87,14 @@ def update_user(user_update: UserUpdate, request: Request,  db: Session = Depend
         HTTPException: If the user is not found.
     """
     user_service = UserService(db)
-    user_email = request.state.email
-    user = user_service.get_user_by_email(user_email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user_update.username:
-        user.username = user_update.username #type: ignore
-    db.commit()
-    db.refresh(user)
-    return user
+    user_id = request.state.user_id
+    updated_user = user_service.update_user(user_id, user_update)
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Usuario no encontrado"}
+        )
+    return updated_user
 
 # FOR ADMIN
 # @user_router.delete("/users/{user_id}",
@@ -118,14 +123,14 @@ def delete_me(request: Request, db: Session = Depends(get_db)):
     """
     Deletes the authenticated user, we get ID from the token.
     """
+    user_id = request.state.user_id
     user_service = UserService(db)
-    user_email = request.state.email
-    user = user_service.get_user_by_email(user_email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user_service.delete_user(int(user.id)) # type: ignore
-    db.commit()
+    success = user_service.delete_user(user_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Usuario no encontrado"}
+        )
     return None
 
 @user_router.post("/login", tags=["Auth"])
@@ -136,10 +141,17 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         HTTPException: If the credentials are invalid.
     """
     authenticated_user = UserModel.authenticate(db, user.email, user.password)
-    if authenticated_user:
-        user_email: str = str(authenticated_user.email)
-        user_id: int = int(authenticated_user.id)  # type: ignore
-        token: str = create_token(user_id, user_email)
-        return JSONResponse(status_code=200, content={"token": token})
+    if not authenticated_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"message": "Credenciales inválidas"}
+        )
 
-    raise HTTPException(status_code=400, detail="Invalid credentials")
+    user_email: str = str(authenticated_user.email)
+    user_id: int = int(authenticated_user.id)  # type: ignore
+    token: str = create_token(user_id, user_email)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"token": token}
+    )
+

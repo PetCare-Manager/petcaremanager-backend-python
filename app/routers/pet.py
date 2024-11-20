@@ -70,11 +70,19 @@ def update_pet(pet_id: int, pet_data: PetUpdate, request: Request, db: Session =
     user_id = request.state.user_id
     pet_service = PetService(db)
     pet = pet_service.get_pet_by_id(pet_id)
-    if not pet or pet.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Pet not found or does not belong to the user")
+    if not pet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "La mascota no fue encontrada"}
+        )
+    
+    if pet.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": "No tienes permiso para modificar esta mascota"}
+        )
     updated_pet = pet_service.update_pet(pet_id, pet_data)
-    if not updated_pet:
-        raise HTTPException(status_code=404, detail="Pet not found")
+
     return updated_pet
 
 @pet_router.delete("/{pet_id}",
@@ -90,9 +98,15 @@ def delete_pet(pet_id: int, request: Request, db: Session = Depends(get_db)):
     user_id = request.state.user_id
     pet_service = PetService(db)
     pet = pet_service.get_pet_by_id(pet_id)
-    if not pet or pet.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Pet not found or does not belong to the user")
-    success = pet_service.delete_pet(pet_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Pet not found")
+    if not pet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "La mascota no fue encontrada"}
+        )
+    
+    if pet.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": "No tienes permiso para eliminar esta mascota"}
+        )
     return None
