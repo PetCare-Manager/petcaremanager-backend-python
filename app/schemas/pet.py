@@ -17,7 +17,7 @@ class PetBase(BaseModel):
     @classmethod
     def age_must_be_positive(cls, value: int):
         if value <= 0:
-            raise ValueError("Age must be greater than 0")
+            raise ValueError("Edad tiene que ser mayor que 0")
         return value
 
 class PetCreate(PetBase):
