@@ -35,7 +35,7 @@ class PetService:
             return new_pet
         except Exception as e:
             self.db.rollback()
-            raise RuntimeError(f"An error occurred while creating the pet: {e}") from e
+            raise RuntimeError(f"RunTimeError al crear mascota en la base de datos: {e}") from e
 
     def update_pet(self, pet_id: int, pet_data: PetUpdate) -> Optional[PetModel]:
         """Update pet information by given ID."""

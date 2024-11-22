@@ -33,7 +33,7 @@ class UserService:
             return new_user
         except Exception as e:
             self.db.rollback()
-            raise RuntimeError(f"An error occurred while creating the user: {e}") from e
+            raise RuntimeError(f"RunTimError al crear usuario en la base de datos: {e}") from e
 
     def update_user(self, _id: int, user_update: UserUpdate) ->  Optional[UserModel]:
         """Update username by given id."""

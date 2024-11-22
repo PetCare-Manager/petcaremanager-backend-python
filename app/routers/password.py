@@ -3,7 +3,7 @@ Routes and logic for password reset functionality in the PetCare Manager applica
     - POST /api/auth/password/: Initiates a password reset for a given email.
     - POST /api/auth/password/confirm: Resets the user's password using a valid reset token.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from config.database import get_db
 from models.user import User as UserModel
@@ -23,10 +23,15 @@ def request_password_reset(request: PasswordResetRequest, db: Session = Depends(
     user_service = UserService(db)
     user = user_service.get_user_by_email(request.email)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Usuario no encontrado"})
     reset_token = create_reset_token(request.email)
-    send_password_reset_email(request.email, reset_token)
-
+    try:
+        send_password_reset_email(request.email, reset_token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": f"No se pudo enviar el correo: {str(e)}"}
+        )
     return {"message": "Password reset email sent", "token": reset_token}
 
 @pass_router.post("/confirm", tags=["Auth"])
@@ -34,13 +39,14 @@ def reset_password_confirm(request: PasswordResetConfirm, db: Session = Depends(
     """
     Resets the user's password using a valid reset token.
     """
-    email = validate_reset_token(request.token)
-    if not email:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    try:
+        email = validate_reset_token(request.token)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message": str(e)}) from e
 
     user = db.query(UserModel).filter(UserModel.email == email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Usuario no encontrado"})
     hashed_password = UserModel.create_password(request.new_password)
     user.password = hashed_password #type: ignore
     db.commit()

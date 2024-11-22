@@ -3,7 +3,6 @@ ErrorHandler Middleware
 
 This middleware handles unexpected exceptions in the FastAPI application.
 """
-
 from typing import Awaitable, Callable, Union
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -25,11 +24,11 @@ class ErrorHandler(BaseHTTPMiddleware):
             return await call_next(request)
         except (TypeError, ValueError, KeyError, AttributeError) as e:
             return JSONResponse(status_code=400, content={
-                "error": "Invalid request data", 
+                "error": "Error en la petición del cliente", 
                 "message": str(e)
             })
         except (IntegrityError, OperationalError, DataError) as e:
             return JSONResponse(status_code=500, content={
-                "error": "Database error",
+                "error": "Error en la base de datos",
                 "message": str(e)
             })

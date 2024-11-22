@@ -28,9 +28,9 @@ def validate_token(token: str) -> Dict[str, str]:
         data: Dict[str, str] = decode(token, key=SECRET_KEY, algorithms=["HS256"])
         return data
     except ExpiredSignatureError as exc:
-        raise ValueError("Token has expired") from exc
+        raise ValueError("El token ha expirado") from exc
     except InvalidTokenError as exc:
-        raise ValueError("Invalid token") from exc
+        raise ValueError("Token Invalido") from exc
 
 
 def create_reset_token(email: str) -> str:
@@ -48,6 +48,6 @@ def validate_reset_token(token: str) -> str:
         payload = decode(token, SECRET_KEY, algorithms=["HS256"])
         return payload["email"]
     except ExpiredSignatureError:
-        return "Expired Signature"
+        raise ValueError("El token ha expirado")
     except InvalidTokenError:
-        return "Invalid Token"
+        raise ValueError("Token Invalido")

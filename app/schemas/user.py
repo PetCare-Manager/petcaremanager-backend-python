@@ -24,7 +24,7 @@ class UserLogin(UserBase):
     @field_validator("password")
     @classmethod
     def must_be_password(cls, value: str):
-        password_regex = r'^(?=.*[A-Z])(?=.*[!@#$%^&*()_+=-])(?=.*[a-zA-Z0-9]).{6,}$'
+        password_regex = r"^(?=.*[A-Z])(?=.*[ !\"#\$%&'\(\)\*\+,\-./:;<=>\?@\[\]\\\^_`{\|}~])(?=.*[a-zA-Z0-9]).{6,}$"
         if not re.match(password_regex, value):
             raise ValueError("Password must be at least 6 characters long, contain one uppercase letter, and one special symbol")
         return value
