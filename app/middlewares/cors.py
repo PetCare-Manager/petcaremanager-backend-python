@@ -10,7 +10,7 @@ def setup_cors(app: FastAPI) -> None:
     """
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Puedes especificar orígenes específicos en lugar de "*"
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
