@@ -133,7 +133,7 @@ def delete_me(request: Request, db: Session = Depends(get_db)):
         )
     return None
 
-@user_router.post("/login", tags=["Auth"])
+@user_router.post("/auth/login", tags=["Auth"])
 def login(user: UserLogin, db: Session = Depends(get_db)):
     """
     Authenticates a user and returns a JWT token if successful.
