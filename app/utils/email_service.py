@@ -1,16 +1,44 @@
-import os
 import ssl
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
-
 load_dotenv()
-USER = os.getenv("MAIL_USERNAME")
-PASSWORD = os.getenv("MAIL_PASSWORD")
-SERVER = os.getenv("MAIL_HOST")
-PORT = os.getenv("MAIL_PORT")
-assert USER and PASSWORD and SERVER, "SMTP credentials not set"
+import sendgrid
+from sendgrid.helpers.mail import Mail
+from os import getenv
+SENDGRID_API_KEY = getenv("SENDGRID_API_KEY")
+def send_test_by_sengrid(email: str, reset_token: str):
+    """Sends a password reset email using SendGrid."""
+    if not SENDGRID_API_KEY:
+        raise ValueError("SendGrid API Key is not set or is empty.")
+    reset_link = f"http://localhost:8081/login?token={reset_token}"
+    sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+    message = Mail(
+        from_email="diegoguamanmedina@gmail.com",
+        to_emails=email,
+        subject="Password Reset Request",
+        html_content=f"""
+            <p>Hola,</p>
+            <p>Has solicitado restablecer tu contraseña.</p>
+            <p>Haz clic en el enlace de abajo para restablecerla:</p>
+            <a href="{reset_link}">Restablecer Contraseña</a>
+            <p>Este enlace expirará en 1 hora.</p>
+            <p>Si no solicitaste esto, por favor ignora este correo.</p>
+        """
+    )
+    try:
+        response = sg.send(message)
+        if response.status_code != 202:
+            raise Exception(f"Fallo al enviar el email, Body: {response.body}")
+    except Exception as e:
+        raise RuntimeError(f"Error envienado el email: {str(e)}")
 
+# load_dotenv()
+# USER = os.getenv("MAIL_USERNAME")
+# PASSWORD = os.getenv("MAIL_PASSWORD")
+# SERVER = os.getenv("MAIL_HOST")
+# PORT = os.getenv("MAIL_PORT")
+# assert USER and PASSWORD and SERVER, "SMTP credentials not set"
 def send_password_reset_email(email: str, reset_token: str):
     """ Sends a password reset email to the user."""
     MAIL_PORT = PORT
