@@ -2,19 +2,20 @@ import ssl
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
-load_dotenv()
 import sendgrid
 from sendgrid.helpers.mail import Mail
 from os import getenv
+load_dotenv()
 SENDGRID_API_KEY = getenv("SENDGRID_API_KEY")
-def send_test_by_sengrid(email: str, reset_token: str):
+FROM_EMAIL=getenv("FROM_EMAIL_OF_TEMPLATE_MAIL")
+def send_email_by_sengrid(email: str, reset_token: str):
     """Sends a password reset email using SendGrid."""
     if not SENDGRID_API_KEY:
         raise ValueError("SendGrid API Key is not set or is empty.")
     reset_link = f"http://localhost:8081/login?token={reset_token}"
     sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
     message = Mail(
-        from_email="diegoguamanmedina@gmail.com",
+        from_email=FROM_EMAIL,
         to_emails=email,
         subject="Password Reset Request",
         html_content=f"""
