@@ -1,33 +1,29 @@
 """
 Definition of schemas for Pet
 """
-from datetime import datetime
+from datetime import date
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_validator
+from models.pet import Gender 
+
+
 
 class PetBase(BaseModel):
     name: str
-    breed: Optional[str] = None
-    age: int
-    birth: Optional[datetime] = None
-    weight: Optional[int] = None
+    breed: str
+    birth: date
+    gender: Gender
+    breed: str
+    chip: Optional[str]
+    illness: bool
     neutered: bool
-
-    @field_validator("age")
-    @classmethod
-    def age_must_be_positive(cls, value: int):
-        if value <= 0:
-            raise ValueError("Edad tiene que ser mayor que 0")
-        return value
+    weight: Optional[float] = None
 
 class PetCreate(PetBase):
     pass
 
 class PetUpdate(BaseModel):
-    name: Optional[str] = None
-    breed: Optional[str] = None
-    age: Optional[int] = None
-    weight: Optional[int] = None
+    weight: Optional[float] = None
     neutered: Optional[bool] = None
 
 class PetResponse(PetBase):
