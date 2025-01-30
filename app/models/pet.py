@@ -30,7 +30,7 @@ class Pet(Base):
     gender: Mapped[str] = mapped_column(Enum("M", "F", name="gender_enum"), nullable=False)
     chip_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     chronic_illnesses: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
-
+    neutered: Mapped[bool] = mapped_column(Boolean, nullable=False)
     owner: Mapped["User"] = relationship("User", back_populates="pets")
     medical_info: Mapped["MedicalInfo"] = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
     photos: Mapped[List["Photo"]] = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")
