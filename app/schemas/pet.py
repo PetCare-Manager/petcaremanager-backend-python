@@ -14,7 +14,8 @@ class PetBase(BaseModel):
     birth: datetime
     neutered: bool
     gender: str
-    
+    chip_number: Optional[int] = None
+    chronic_illnesses: Optional[bool] = False
 
     
 
