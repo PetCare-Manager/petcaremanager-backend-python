@@ -7,17 +7,18 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 class PetBase(BaseModel):
     name: str
-    breed: Optional[str] = None
-    age: int
+    breed: str
     birth: Optional[datetime] = None
-    weight: Optional[int] = None
     neutered: bool
+    gender: str
+    chip_number: Optional[int] = None
+    chronic_illnesses: Optional[bool] = False
 
-    @field_validator("age")
+    @field_validator("chip_number")
     @classmethod
-    def age_must_be_positive(cls, value: int):
-        if value <= 0:
-            raise ValueError("Edad tiene que ser mayor que 0")
+    def chip_must_have_15_numbers(cls, value: int):
+        if value <= 15:
+            raise ValueError("Tu número de chip debe tener 15 dígitos")
         return value
 
 class PetCreate(PetBase):
@@ -26,9 +27,8 @@ class PetCreate(PetBase):
 class PetUpdate(BaseModel):
     name: Optional[str] = None
     breed: Optional[str] = None
-    age: Optional[int] = None
-    weight: Optional[int] = None
     neutered: Optional[bool] = None
+    gender: Optional[str] = None
 
 class PetResponse(PetBase):
     id: int

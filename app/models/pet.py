@@ -7,6 +7,7 @@ from sqlalchemy import Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from config.database import Base
 from models.user import User
+from sqlalchemy import Enum
 
 class Pet(Base):
     """
@@ -19,11 +20,11 @@ class Pet(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     breed: Mapped[Optional[str]] = mapped_column(String)
-    age: Mapped[Optional[int]] = mapped_column(Integer)
     birth: Mapped[Optional[Date]] = mapped_column(Date)
-    weight: Mapped[Optional[int]] = mapped_column(Integer)
     neutered: Mapped[bool] = mapped_column(Boolean, default=False)
-
+    gender: Mapped[str] = mapped_column(Enum("M", "F", name="gender_enum"), nullable=False)
+    chip_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    chronic_illnesses: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     owner: Mapped["User"] = relationship("User", back_populates="pets")
     medical_info: Mapped["MedicalInfo"] = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
     photos: Mapped[List["Photo"]] = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")
