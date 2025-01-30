@@ -2,11 +2,17 @@
 Pet model for interacting with the pets table in the database.
 Includes database for medical_info, photos, and events.
 """
+from enum import Enum as PyEnum
 from typing import List, Optional
-from sqlalchemy import Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Integer, String, Boolean, Date, ForeignKey, Float, Enum
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from config.database import Base
 from models.user import User
+
+class Gender(PyEnum):
+    MALE = "Macho"
+    FEMALE = "Hembra"
+
 from sqlalchemy import Enum
 
 class Pet(Base):
@@ -19,12 +25,12 @@ class Pet(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    breed: Mapped[Optional[str]] = mapped_column(String)
-    birth: Mapped[Optional[Date]] = mapped_column(Date)
-    neutered: Mapped[bool] = mapped_column(Boolean, default=False)
+    birth: Mapped[Date] = mapped_column(Date, nullable=False)
+    breed: Mapped[str] = mapped_column(String, nullable=False)
     gender: Mapped[str] = mapped_column(Enum("M", "F", name="gender_enum"), nullable=False)
     chip_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     chronic_illnesses: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
+
     owner: Mapped["User"] = relationship("User", back_populates="pets")
     medical_info: Mapped["MedicalInfo"] = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
     photos: Mapped[List["Photo"]] = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")
@@ -42,7 +48,6 @@ class MedicalInfo(Base):
     vet_card_image_url: Mapped[Optional[str]] = mapped_column(String)
     qr_chip_image_url: Mapped[Optional[str]] = mapped_column(String)
     allergies: Mapped[Optional[str]] = mapped_column(String)
-    illness: Mapped[Optional[str]] = mapped_column(String)
 
     pet: Mapped["Pet"] = relationship("Pet", back_populates="medical_info")
 
