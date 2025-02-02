@@ -1,7 +1,7 @@
 """
 Definition of schemas for Pet
 """
-from datetime import datetime
+from datetime import date
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_validator
 from models.pet import Gender 
@@ -11,7 +11,7 @@ from models.pet import Gender
 class PetBase(BaseModel):
     name: str
     breed: str
-    birth: datetime
+    birth: date
     neutered: bool
     gender: str
     chip_number: Optional[int] = None
