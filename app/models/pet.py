@@ -13,6 +13,7 @@ class Gender(PyEnum):
     MALE = "Macho"
     FEMALE = "Hembra"
 
+from sqlalchemy import Enum
 
 class Pet(Base):
     """
@@ -25,14 +26,11 @@ class Pet(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     birth: Mapped[Date] = mapped_column(Date, nullable=False)
-    gender: Mapped[Gender] = mapped_column(Enum(Gender), nullable=False)
     breed: Mapped[str] = mapped_column(String, nullable=False)
-    chip: Mapped[Optional[str]] = mapped_column(String)
-    illness: Mapped[bool] = mapped_column(Boolean, default=False)
-    neutered: Mapped[bool] = mapped_column(Boolean, default=False)
-    # age: Mapped[Optional[int]] = mapped_column(Integer)
-    weight: Mapped[Optional[float]] = mapped_column(Float)
-
+    gender: Mapped[str] = mapped_column(Enum("M", "F", name="gender_enum"), nullable=False)
+    chip_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    chronic_illnesses: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
+    neutered: Mapped[bool] = mapped_column(Boolean, nullable=False)
     owner: Mapped["User"] = relationship("User", back_populates="pets")
     medical_info: Mapped["MedicalInfo"] = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
     photos: Mapped[List["Photo"]] = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")

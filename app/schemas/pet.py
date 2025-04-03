@@ -12,20 +12,30 @@ class PetBase(BaseModel):
     name: str
     breed: str
     birth: date
-    gender: Gender
-    breed: str
-    chip: Optional[str]
-    illness: bool
     neutered: bool
-    weight: Optional[float] = None
+    gender: str
+    chip_number: Optional[int] = None
+    chronic_illnesses: Optional[bool] = False
+
+    
 
 class PetCreate(PetBase):
     pass
 
 class PetUpdate(BaseModel):
-    weight: Optional[float] = None
+    name: Optional[str] = None
+    breed: Optional[str] = None
     neutered: Optional[bool] = None
+    gender: Optional[str] = None
+    chip_number: Optional[int] = None
+    chronic_illnesses: Optional[bool] = False
 
+    @field_validator("chip_number")
+    @classmethod
+    def chip_must_have_15_numbers(cls, value: Optional[int]):
+        if value is not None and len(str(value)) != 15:
+            raise ValueError("Tu número de chip debe tener exactamente 15 dígitos")
+        return value
 class PetResponse(PetBase):
     id: int
     user_id: int
