@@ -86,10 +86,10 @@ def update_pet(pet_id: int, pet_data: PetUpdate, request: Request, db: Session =
     return updated_pet
 
 @pet_router.delete("/{pet_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(JWTBearer())]
 )
-def delete_pet(pet_id: int, request: Request, db: Session = Depends(get_db)):
+def delete_pet(pet_id: int, request: Request, db: Session = Depends(get_db)) -> bool:
     """
     Deletes a pet by its unique ID, but only if it belongs to the authenticated user.
     Raises:
@@ -109,4 +109,7 @@ def delete_pet(pet_id: int, request: Request, db: Session = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"message": "No tienes permiso para eliminar esta mascota"}
         )
-    return None
+
+    was_deleted = pet_service.delete_pet(pet_id)
+
+    return was_deleted
