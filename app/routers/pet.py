@@ -3,12 +3,15 @@ API Router for Pet Management
 Provides endpoints for pet registration, retrieval, update and delete.
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from config.database import get_db
 from middlewares.jwt_bearer import JWTBearer
 from schemas.pet import PetCreate, PetUpdate, PetResponse
 from services.pet import PetService
+from models.pet import Pet as PetModel
+from models.pet import Photo # type: ignore
+from utils.upload_service import upload_to_cloudinary
 
 pet_router = APIRouter()
 
@@ -113,3 +116,31 @@ def delete_pet(pet_id: int, request: Request, db: Session = Depends(get_db)) -> 
     was_deleted = pet_service.delete_pet(pet_id)
 
     return was_deleted
+
+@pet_router.post("/{pet_id}/upload-photo", response_model=dict, status_code=201,
+                 dependencies=[Depends(JWTBearer())])
+async def upload_pet_photo(
+    pet_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    # 1) Verifica que la mascota existe y pertenece al usuario
+    pet = db.query(PetModel).filter_by(id=pet_id).first()
+    if not pet or pet.user_id != request.state.user_id:
+        raise HTTPException(status_code=404, detail="Pet not found or unauthorized")
+    # 2) Sube la imagen
+    url = await upload_to_cloudinary(file, folder=f"petcare/pets/{pet_id}")
+    # 3) Guarda la URL en la BD
+    # Si usas image_url en Pet:
+    # pet.image_url = url
+    # db.commit()
+    # db.refresh(pet)
+    # return {"id": pet.id, "image_url": pet.image_url}
+
+    # Si usas Photo:
+    photo = Photo(pet_id=pet_id, url=url)
+    db.add(photo)
+    db.commit()
+    db.refresh(photo)
+    return {"id": photo.id, "url": photo.url}

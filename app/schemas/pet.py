@@ -5,6 +5,7 @@ from datetime import date
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_validator
 from models.pet import Gender 
+from typing import List
 
 
 
@@ -36,8 +37,16 @@ class PetUpdate(BaseModel):
         if value is not None and len(str(value)) != 15:
             raise ValueError("Tu número de chip debe tener exactamente 15 dígitos")
         return value
+    
+class PhotoSchema(BaseModel):
+    id: int
+    url: str
+
+    model_config = ConfigDict(from_attributes=True)
 class PetResponse(PetBase):
     id: int
     user_id: int
+
+    photos: List[PhotoSchema] = []
 
     model_config = ConfigDict(from_attributes=True)
