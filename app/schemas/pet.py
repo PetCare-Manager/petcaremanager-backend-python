@@ -38,15 +38,16 @@ class PetUpdate(BaseModel):
             raise ValueError("Tu número de chip debe tener exactamente 15 dígitos")
         return value
     
-class PhotoSchema(BaseModel):
+class DocumentSchema(BaseModel):
     id: int
     url: str
+    filename: str
 
     model_config = ConfigDict(from_attributes=True)
 class PetResponse(PetBase):
     id: int
     user_id: int
-
-    photos: List[PhotoSchema] = []
+    avatar: Optional[str] = None
+    documents: List[DocumentSchema] = []
 
     model_config = ConfigDict(from_attributes=True)

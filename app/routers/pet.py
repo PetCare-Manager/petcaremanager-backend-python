@@ -7,10 +7,10 @@ from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from config.database import get_db
 from middlewares.jwt_bearer import JWTBearer
-from schemas.pet import PetCreate, PetUpdate, PetResponse
+from schemas.pet import PetCreate, PetUpdate, PetResponse, DocumentSchema
 from services.pet import PetService
-from models.pet import Pet as PetModel
-from models.pet import Photo # type: ignore
+from models.pet import Pet as PetModel, Document
+#from models.pet import Document
 from utils.upload_service import upload_to_cloudinary
 
 pet_router = APIRouter()
@@ -117,30 +117,65 @@ def delete_pet(pet_id: int, request: Request, db: Session = Depends(get_db)) -> 
 
     return was_deleted
 
-@pet_router.post("/{pet_id}/upload-photo", response_model=dict, status_code=201,
-                 dependencies=[Depends(JWTBearer())])
-async def upload_pet_photo(
+@pet_router.post(
+    "/{pet_id}/avatar", 
+    response_model=PetResponse, 
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(JWTBearer())]
+)
+async def upload_pet_avatar(
     pet_id: int,
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
     # 1) Verifica que la mascota existe y pertenece al usuario
-    pet = db.query(PetModel).filter_by(id=pet_id).first()
+    pet = db.get(PetModel, pet_id)
     if not pet or pet.user_id != request.state.user_id:
-        raise HTTPException(status_code=404, detail="Pet not found or unauthorized")
-    # 2) Sube la imagen
-    url = await upload_to_cloudinary(file, folder=f"petcare/pets/{pet_id}")
+        raise HTTPException(status_code=404, detail="Mascota no encontrada o no pertenece al usuario")
+    
+    # 2) Sube la imagen y extrae solo la URL
+    url = await upload_to_cloudinary(file, folder=f"petcare/pets/{pet_id}/avatar")
     # 3) Guarda la URL en la BD
-    # Si usas image_url en Pet:
-    # pet.image_url = url
-    # db.commit()
-    # db.refresh(pet)
-    # return {"id": pet.id, "image_url": pet.image_url}
-
-    # Si usas Photo:
-    photo = Photo(pet_id=pet_id, url=url)
-    db.add(photo)
+    pet.avatar = url
     db.commit()
-    db.refresh(photo)
-    return {"id": photo.id, "url": photo.url}
+    db.refresh(pet)
+    #return pet
+    return {"id": pet.id, "avatar": pet.avatar}
+
+@pet_router.post(
+    "/{pet_id}/documents",
+    response_model=List[DocumentSchema],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(JWTBearer())]
+)
+async def upload_pet_documents(
+    pet_id: int,
+    request: Request,
+    files: List[UploadFile] = File(..., max_items=5),
+    db: Session = Depends(get_db)
+):
+    # 1) Verifica que la mascota existe y pertenece al usuario
+    pet = db.get(PetModel, pet_id)
+    if not pet or pet.user_id != request.state.user_id:
+        raise HTTPException(status_code=404, detail="Mascota no encontrada o no pertenece al usuario")
+    
+    # 2) Controla que no supere el límite de 5 documentos
+    existing = len(pet.documents)
+    if existing + len(files) > 5:
+        raise HTTPException(
+             status_code=400,
+             detail=f"Already {existing} documents, you can upload up to 5 total"
+         )
+    created: List[Document] = []
+    for file in files:
+        url, filename = await upload_to_cloudinary(
+            file, folder=f"petcare/pets/{pet_id}/documents"
+        )
+        doc = Document(pet_id=pet_id, url=url, filename=filename)
+        db.add(doc)
+        created.append(doc)
+    db.commit()
+    for doc in created:
+        db.refresh(doc)
+    return created

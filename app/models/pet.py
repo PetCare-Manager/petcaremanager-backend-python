@@ -32,9 +32,10 @@ class Pet(Base):
     chronic_illnesses: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     neutered: Mapped[bool] = mapped_column(Boolean, nullable=False)
     owner: Mapped["User"] = relationship("User", back_populates="pets")
-    medical_info: Mapped["MedicalInfo"] = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan")
-    photos: Mapped[List["Photo"]] = relationship("Photo", back_populates="pet", cascade="all, delete-orphan")
+    medical_info: Mapped["MedicalInfo"] = relationship("MedicalInfo", back_populates="pet", cascade="all, delete-orphan", order_by="Document.id")
+    documents: Mapped[List["Document"]] = relationship("Document", back_populates="pet", cascade="all, delete-orphan")
     events: Mapped[List["Event"]] = relationship("Event", back_populates="pet", cascade="all, delete-orphan")
+    avatar: Mapped[str] = mapped_column(String, nullable=True)
 
 
 class MedicalInfo(Base):
@@ -54,15 +55,17 @@ class MedicalInfo(Base):
 
 
 
-class Photo(Base):
-    """Photos of a pet."""
-    __tablename__ = "photos"
+class Document(Base):
+    """Documents of a pet."""
+    __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     pet_id: Mapped[int] = mapped_column(ForeignKey("pets.id"), nullable=False)
     url: Mapped[str] = mapped_column(String, nullable=False)
+    filename: Mapped[str] = mapped_column(String, nullable=False)
 
-    pet: Mapped["Pet"] = relationship("Pet", back_populates="photos")
+
+    pet: Mapped["Pet"] = relationship("Pet", back_populates="documents")
 
 
 
