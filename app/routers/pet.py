@@ -140,8 +140,8 @@ async def upload_pet_avatar(
     pet.avatar = url
     db.commit()
     db.refresh(pet)
-    #return pet
-    return {"id": pet.id, "avatar": pet.avatar}
+    return pet
+    #return {"id": pet.id, "avatar": pet.avatar}
 
 @pet_router.post(
     "/{pet_id}/documents",

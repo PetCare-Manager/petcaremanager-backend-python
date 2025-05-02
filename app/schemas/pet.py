@@ -18,7 +18,7 @@ class PetBase(BaseModel):
     chip_number: Optional[int] = None
     chronic_illnesses: Optional[bool] = False
 
-    
+    model_config = ConfigDict(from_attributes=True)
 
 class PetCreate(PetBase):
     pass
