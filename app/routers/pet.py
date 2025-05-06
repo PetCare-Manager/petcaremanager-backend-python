@@ -3,7 +3,7 @@ API Router for Pet Management
 Provides endpoints for pet registration, retrieval, update and delete.
 """
 from typing import List
-from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, Request, status
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, Request, status, Path, Response
 from sqlalchemy.orm import Session
 from config.database import get_db
 from middlewares.jwt_bearer import JWTBearer
@@ -12,6 +12,7 @@ from services.pet import PetService
 from models.pet import Pet as PetModel, Document
 #from models.pet import Document
 from utils.upload_service import upload_to_cloudinary
+from sqlalchemy.exc import SQLAlchemyError
 
 pet_router = APIRouter()
 
@@ -32,21 +33,22 @@ def create_pet(pet: PetCreate, request: Request, db: Session = Depends(get_db)):
     new_pet = pet_service.create_pet(pet, user_id)
     return new_pet
 
-# @pet_router.get("/{pet_id}",
-#     response_model=PetResponse,
-#     dependencies=[Depends(JWTBearer())]
-# )
-# def get_pet(pet_id: int, db: Session = Depends(get_db)):
-#     """
-#     Retrieves a pet by its unique ID.
-#     Raises:
-#         HTTPException: If the pet is not found.
-#     """
-#     pet_service = PetService(db)
-#     pet = pet_service.get_pet_by_id(pet_id)
-#     if not pet:
-#         raise HTTPException(status_code=404, detail="Pet not found")
-#     return pet
+@pet_router.get("/{pet_id}",
+    response_model=PetResponse,
+    dependencies=[Depends(JWTBearer())]
+)
+def get_pet(pet_id: int, request: Request, db: Session = Depends(get_db)):
+    """
+    Retrieves a pet by its unique ID.
+    Raises:
+        HTTPException: If the pet is not found.
+    """
+    user_id = request.state.user_id
+    pet_service = PetService(db)
+    pet = pet_service.get_pet_by_id(pet_id)
+    if not pet or pet.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Mascota no encontrada o no te pertenece")
+    return pet
 
 @pet_router.get("/", response_model=List[PetResponse], dependencies=[Depends(JWTBearer())])
 def get_pets(request: Request, db: Session = Depends(get_db)):
@@ -169,13 +171,50 @@ async def upload_pet_documents(
          )
     created: List[Document] = []
     for file in files:
-        url, filename = await upload_to_cloudinary(
+        url= await upload_to_cloudinary(
             file, folder=f"petcare/pets/{pet_id}/documents"
         )
-        doc = Document(pet_id=pet_id, url=url, filename=filename)
+        doc = Document(pet_id=pet_id, url=url, filename=file.filename)
         db.add(doc)
         created.append(doc)
     db.commit()
     for doc in created:
         db.refresh(doc)
     return created
+
+@pet_router.delete(
+    "/{pet_id}/documents/{doc_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(JWTBearer())]
+)
+def delete_pet_document(
+    pet_id: int,
+    request: Request,
+    doc_id: int = Path(..., description="ID del documento a eliminar"),
+    db: Session = Depends(get_db)
+):
+    # 1) Verificar mascota y permiso
+    pet = db.get(PetModel, pet_id)
+    if not pet or pet.user_id != request.state.user_id:
+        raise HTTPException(status_code=404, detail="Mascota no encontrada o no te pertenece")
+
+    # 2) Obtener documento
+    doc = db.query(Document).filter_by(id=doc_id, pet_id=pet_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    try:
+        # 3) Eliminar de Cloudinary (opcional)
+        # cloudinary.uploader.destroy(doc.public_id, resource_type="raw")
+
+        # 4) Eliminar de la BD
+        db.delete(doc)
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error eliminando el documento en la BD: {e}")
+    except Exception as e:
+        # Captura errores genéricos (por ejemplo fallo en Cloudinary)
+        raise HTTPException(status_code=500, detail=f"Error eliminando el documento: {e}")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
