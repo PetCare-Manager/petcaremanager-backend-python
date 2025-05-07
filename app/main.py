@@ -29,7 +29,6 @@ app.include_router(user_router, prefix="/api")
 app.include_router(pass_router, prefix="/api/auth/password", tags=["Auth"])
 app.include_router(pet_router, prefix="/api/pets", tags=["Pets"])
 
-
 @app.get("/health", tags=["Health"])
 def health_check():
     """Health Check"""
