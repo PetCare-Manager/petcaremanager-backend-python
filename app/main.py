@@ -3,7 +3,7 @@ PetCareManager Backend built with FastAPI
 """
 
 from fastapi import FastAPI, HTTPException
-import utils.cloudinary_config as _ # <-- asegura inicialización
+#import utils.cloudinary_config as _ # <-- asegura inicialización
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
