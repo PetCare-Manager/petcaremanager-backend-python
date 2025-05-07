@@ -4,14 +4,14 @@ Includes database for medical_info, photos, and events.
 """
 from enum import Enum as PyEnum
 from typing import List, Optional
-from sqlalchemy import Integer, String, Boolean, Date, ForeignKey, Float, Enum
+from sqlalchemy import Integer, String, Boolean, Date, ForeignKey, Float as SQLFloat, Enum as SQLEnum
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from config.database import Base
 from models.user import User
 
 class Gender(PyEnum):
-    MALE = "Macho"
-    FEMALE = "Hembra"
+    MALE = "M"
+    FEMALE = "F"
 
 from sqlalchemy import Enum
 
@@ -27,7 +27,8 @@ class Pet(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     birth: Mapped[Date] = mapped_column(Date, nullable=False)
     breed: Mapped[str] = mapped_column(String, nullable=False)
-    gender: Mapped[str] = mapped_column(Enum("M", "F", name="gender_enum"), nullable=False)
+    weight: Mapped[float] = mapped_column(SQLFloat, nullable=True)
+    gender: Mapped[str] = mapped_column(SQLEnum(Gender, name="gender_enum", validate_strings=True), nullable=False)
     chip_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     chronic_illnesses: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     neutered: Mapped[bool] = mapped_column(Boolean, nullable=False)

@@ -13,7 +13,8 @@ class PetBase(BaseModel):
     breed: str
     birth: date
     neutered: bool
-    gender: str
+    gender: Gender
+    weight: float
     chip_number: Optional[int] = None
     chronic_illnesses: Optional[bool] = False
 
@@ -26,7 +27,8 @@ class PetUpdate(BaseModel):
     name: Optional[str] = None
     breed: Optional[str] = None
     neutered: Optional[bool] = None
-    gender: Optional[str] = None
+    gender: Optional[Gender] = None
+    weight: Optional[float] = None
     chip_number: Optional[int] = None
     chronic_illnesses: Optional[bool] = False
 
