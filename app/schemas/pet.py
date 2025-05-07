@@ -2,11 +2,9 @@
 Definition of schemas for Pet
 """
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, field_validator
-from models.pet import Gender 
-from typing import List
-
+from models.pet import Gender
 
 
 class PetBase(BaseModel):
