@@ -16,6 +16,7 @@ class PetBase(BaseModel):
     weight: float
     chip_number: Optional[int] = None
     chronic_illnesses: Optional[bool] = False
+    bg_color: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
