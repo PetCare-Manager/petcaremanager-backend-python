@@ -26,8 +26,9 @@ def request_password_reset(request: PasswordResetRequest, db: Session = Depends(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Usuario no encontrado"})
     reset_token = create_reset_token(request.email)
     try:
+        print("__FLAG__reset_token: ", reset_token)
         #send_password_reset_email(request.email, reset_token)
-        send_email_by_sengrid(request.email, reset_token)
+        #send_email_by_sengrid(request.email, reset_token)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
