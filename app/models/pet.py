@@ -37,6 +37,7 @@ class Pet(Base):
     documents: Mapped[List["Document"]] = relationship("Document", back_populates="pet", cascade="all, delete-orphan")
     events: Mapped[List["Event"]] = relationship("Event", back_populates="pet", cascade="all, delete-orphan")
     avatar: Mapped[str] = mapped_column(String, nullable=True)
+    bg_color: Mapped[str] = mapped_column(String, nullable=True)
 
 
 class MedicalInfo(Base):
