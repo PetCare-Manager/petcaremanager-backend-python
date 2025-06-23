@@ -1,9 +1,11 @@
 ##
 ## GLOBAL CONFIG
 ##
-include docker/local/.env
+#include docker/local/.env
+include .env
 
-DOCKER_DIR := docker/local
+#DOCKER_DIR := docker/local
+DOCKER_DIR := .
 DOCKER_COMPOSE := docker compose -f $(DOCKER_DIR)/docker-compose.yaml
 HTTP_PORT := $(PYTHON_EXTERNAL_PORT)
 
