@@ -42,4 +42,4 @@ def get_db():
     try:
         yield db # Devuelve la sesión para el request actual
     finally:
-        db.close()
+        db.close() # Esta línea cierra la sesión después del request

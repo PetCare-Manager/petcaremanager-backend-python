@@ -18,7 +18,7 @@ class InvalidConfigurationError(DatabaseConfigError):
     """
     Se lanza cuando la configuracion de la base de datos es invalida.
     """
-    def __init__(self, variableserroneas: dict):#las variables erroneas van en un diccionario porque podemos asociar el nombre de la variable con el error
+    def __init__(self, variableserroneas: dict):# las variables erroneas van en un diccionario porque podemos asociar el nombre de la variable con el error
         self.variableserroneas = variableserroneas
 
         mensaje = "\n".join([
@@ -36,24 +36,6 @@ class ConnectionConfigError(DatabaseConfigError):
 
     def __init__(self, connection_error: str):
         message = f"Error en la configuración de conexión: {connection_error}"
-        super().__init__(message)
-
-class AuthenticationConfigError(DatabaseConfigError):
-    """Se lanza cuando hay problemas con las credenciales de la base de datos"""
-    def __init__(self, auth_error: str):
-        message = f"Error en las credenciales de la base de datos: {auth_error}"
-        super().__init__(message)
-
-class CharsetConfigError(DatabaseConfigError):
-    """Se lanza cuando hay problemas con la codificación de caracteres"""
-    def __init__(self, charset_error: str):
-        message = f"Error en la configuración de charset: {charset_error}"
-        super().__init__(message)
-
-class TimeoutConfigError(DatabaseConfigError):
-    """Se lanza cuando hay problemas con la configuración de timeouts"""
-    def __init__(self, timeout_error: str):
-        message = f"Error en la configuración de timeout: {timeout_error}"
         super().__init__(message)
 
 class PoolConfigError(DatabaseConfigError):
