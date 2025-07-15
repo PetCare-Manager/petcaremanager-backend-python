@@ -54,9 +54,6 @@ class MedicalInfo(Base):
 
     pet: Mapped["Pet"] = relationship("Pet", back_populates="medical_info")
 
-
-
-
 class Document(Base):
     """Documents of a pet."""
     __tablename__ = "documents"
@@ -65,11 +62,7 @@ class Document(Base):
     pet_id: Mapped[int] = mapped_column(ForeignKey("pets.id"), nullable=False)
     url: Mapped[str] = mapped_column(String, nullable=False)
     filename: Mapped[str] = mapped_column(String, nullable=False)
-
-
     pet: Mapped["Pet"] = relationship("Pet", back_populates="documents")
-
-
 
 class Event(Base):
     """Events for a pet."""

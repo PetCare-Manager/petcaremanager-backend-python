@@ -1,35 +1,45 @@
 """
-Creation of session for database connection
+Mantiene la conexion y sesiones a la base de datos
+
+create_engine usa la URL y config de tu clase para conectar.
+
+sessionmaker crea sesiones para manejar transacciones y consultas.
+
+scoped_session asegura que la sesión sea segura para contextos concurrentes.
+
+get_db es una función generadora típica para frameworks web, para abrir y cerrar sesiones automáticamente.
+
+
 """
-
-import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm.session import sessionmaker
-from sqlalchemy.orm import declarative_base, configure_mappers
-from sqlalchemy.exc import ArgumentError, InvalidRequestError
-from dotenv import load_dotenv
+from sqlalchemy.orm import sessionmaker, scoped_session
+from config.database_config import database_config  # Importa la factory de configuración
 
-load_dotenv()
+# Crear instancia de configuración
+config = database_config()
 
-base_dir = os.path.dirname(os.path.realpath(__file__))
-database_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(base_dir, '../develop.db')}")
+# Obtener la URL de conexión (MySQL o SQLite según entorno)
+DATABASE_URL = config.obtener_conexion_url()
 
-# if os.getenv("TESTING") == "1":
-#     database_url = "sqlite:///:memory:"
+# Obtener la configuración para el engine (pool, echo, etc)
+ENGINE_CONFIG = config.obtener_config_engine()
 
-engine = create_engine(database_url, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+# Crear el engine de SQLAlchemy
+engine = create_engine(DATABASE_URL, **ENGINE_CONFIG)
+
+# Crear la sesión para interacción con la DB
+SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+#sessionmaker(...) define cómo crear sesiones configuradas.
+#scoped_session(...) garantiza que cada hilo/request use su propia sesión segura.
+#La variable SessionLocal es un objeto que cuando se llama crea o retorna la sesión adecuada para ese contexto.
 
 def get_db():
-    """Provides a database session for dependency injection."""
+    """
+    Dependency para usar en frameworks (FastAPI, Flask, etc)
+    Genera una sesión para cada request y la cierra después.
+    """
     db = SessionLocal()
     try:
-        yield db
+        yield db # Devuelve la sesión para el request actual
     finally:
-        db.close()
-
-try:
-    configure_mappers()
-except (ArgumentError, InvalidRequestError) as e:
-    print(f"Error configuring mappers: {e}")
+        db.close() # Esta línea cierra la sesión después del request
