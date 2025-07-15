@@ -1,5 +1,9 @@
 # PetCareManager Backend
 
+
+# Steps
+
+
 ## Requirements
 - make
 - docker
