@@ -35,9 +35,10 @@ class DatabaseConfig:
         "POOL_PRE_PING": True   # Verificar conexiones
     }
 
-    def __init__(self):
+    def __init__(self, cargar_dotenv=True):
         """Inicializa y valida la configuración"""
-        load_dotenv() 
+        if cargar_dotenv:  # Cargar variables de entorno desde .env si se indica
+            load_dotenv() 
         self.config = {} # Diccionario para almacenar la configuración
         self.cargar_config()
         self.validar_config()
@@ -46,11 +47,11 @@ class DatabaseConfig:
 
         # Primero, cargar valores requeridos
         for var in self.REQUIRED_VARS:
-            self.config[var] = os.getenv(var)
+            self.config[var] = os.environ.get(var) # environ.get(var) obtiene el valor de la variable de entorno, o None si no existe
 
         # Luego, cargar valores con defaults
         for var, default in self.DEFAULT_VALUES.items():
-            self.config[var] = os.getenv(var, default)
+            self.config[var] = os.environ.get(var, default)
         
     def validar_config(self) -> None:
         self._validar_variables_requeridas()

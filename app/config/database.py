@@ -9,11 +9,10 @@ scoped_session asegura que la sesión sea segura para contextos concurrentes.
 
 get_db es una función generadora típica para frameworks web, para abrir y cerrar sesiones automáticamente.
 
-
 """
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from config.database_config import database_config  # Importa la factory de configuración
+from sqlalchemy.orm import sessionmaker, scoped_session, declarative_base
+from app.config.database_config import database_config  # Importa la factory de configuración
 
 # Crear instancia de configuración
 config = database_config()
@@ -32,6 +31,21 @@ SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bi
 #sessionmaker(...) define cómo crear sesiones configuradas.
 #scoped_session(...) garantiza que cada hilo/request use su propia sesión segura.
 #La variable SessionLocal es un objeto que cuando se llama crea o retorna la sesión adecuada para ese contexto.
+
+# Crear la clase base para los modelos
+Base = declarative_base()
+
+"""
+
+Base = lista de tus tablas.
+
+ORM = traductor entre Python y SQL.
+
+Alembic = aplica cambios (migraciones) usando la info de Base.
+
+💥 Si no defines Base, nada de esto funciona.
+
+"""
 
 def get_db():
     """
