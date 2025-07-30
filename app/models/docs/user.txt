@@ -1,0 +1,1148 @@
+# 🔥 **GUÍA COMPLETA: MODELO USER PARA MYSQL PRODUCCIÓN**
+
+## 🔥 **SECCIÓN 1: IMPORTACIONES**
+
+```python
+# Línea 1-2
+from typing import Optional
+from datetime import datetime
+```
+**QUÉ HACE:** Importa tipos y funciones de fecha/hora
+**POR QUÉ CADA UNO:**
+- `Optional` → Para campos que pueden ser None (nombre, apellidos, etc.)
+- `datetime` → Para timestamps y manejo de fechas con hora
+**SIN ESTO:** No puedes hacer type hints correctos ni manejar fechas
+
+```python
+# Línea 3
+import bcrypt
+```
+**QUÉ HACE:** Importa la librería para hashear contraseñas de forma segura
+**POR QUÉ bcrypt:** 
+- Es el estándar de la industria para passwords
+- Incluye salt automático
+- Ajustable en complejidad (rounds)
+**SIN ESTO:** Contraseñas en texto plano = DESASTRE de seguridad
+
+```python
+# Líneas 4-6
+from sqlalchemy import String, Text, Boolean, DateTime, Integer, Index
+from sqlalchemy.orm import Session, relationship, Mapped, mapped_column
+from sqlalchemy.sql import func
+```
+**QUÉ HACE:** Importa todas las herramientas de SQLAlchemy
+**DESGLOSE:**
+- `String, Text, Boolean, DateTime, Integer` → Tipos de datos
+- `Index` → Para crear índices optimizados
+- `Session` → Para manejar transacciones de DB
+- `relationship, Mapped, mapped_column` → Para definir tablas y relaciones
+- `func` → Para funciones SQL como `now()`
+
+```python
+# Línea 7
+from config.database import Base
+```
+**QUÉ HACE:** Importa la clase base para crear tablas
+**POR QUÉ:** Todas las clases modelo deben heredar de Base
+
+---
+
+## 🔥 **SECCIÓN 2: CLASE USER - CONFIGURACIÓN**
+
+```python
+# Línea 9
+class User(Base):
+```
+**QUÉ HACE:** Define la clase User que hereda de Base
+**POR QUÉ:** Base convierte automáticamente la clase en una tabla de SQLAlchemy
+
+```python
+# Líneas 10-35
+"""
+Modelo de Usuario optimizado para MySQL en producción.
+
+Esta clase define la estructura de la entidad usuario e incluye métodos para
+autenticación, gestión de contraseñas y operaciones de base de datos optimizadas.
+
+Atributos:
+    id: Identificador único del usuario (clave primaria)
+    username: Nombre de usuario único (opcional)
+    email: Correo electrónico único (requerido)
+    password: Contraseña hasheada con bcrypt
+    nombre: Nombre completo del usuario
+    apellidos: Apellidos del usuario
+    avatar_url: URL del avatar del usuario
+    is_active: Estado del usuario (activo/inactivo)
+    is_verified: Indica si el email está verificado
+    last_login: Fecha y hora del último acceso
+    login_attempts: Número de intentos de login fallidos
+    created_at: Fecha y hora de creación
+    updated_at: Fecha y hora de última actualización
+    
+Métodos:
+    authenticate: Autenticar usuario con email y contraseña
+    create_password: Crear hash de contraseña
+    is_account_locked: Verificar si la cuenta está bloqueada
+    reset_login_attempts: Resetear intentos de login
+    increment_login_attempts: Incrementar intentos de login
+"""
+```
+**QUÉ HACE:** Documentación completa de la clase
+**POR QUÉ:** Para que cualquier desarrollador entienda sin leer todo el código
+
+```python
+# Línea 37
+__tablename__ = "usuarios"
+```
+**QUÉ HACE:** Define el nombre de la tabla en la base de datos
+**POR QUÉ "usuarios":** 
+- Nombre en español para consistencia
+- Plural para indicar que contiene múltiples usuarios
+**SIN ESTO:** SQLAlchemy usaría "user" (confuso en español)
+
+```python
+# Líneas 39-53
+__table_args__ = (
+    # Índices compuestos para consultas frecuentes
+    Index('idx_email_active', 'email', 'is_active'),
+    Index('idx_username_active', 'username', 'is_active'),
+    Index('idx_created_at', 'created_at'),
+    Index('idx_last_login', 'last_login'),
+    
+    # Configuración de MySQL
+    {
+        'mysql_engine': 'InnoDB',
+        'mysql_charset': 'utf8mb4',
+        'mysql_collate': 'utf8mb4_unicode_ci',
+        'mysql_row_format': 'DYNAMIC'
+    }
+)
+```
+**QUÉ HACE:** Configuración avanzada de la tabla para MySQL
+**DESGLOSE DE ÍNDICES:**
+- `Index('idx_email_active', 'email', 'is_active')` → Para login rápido de usuarios activos
+- `Index('idx_username_active', 'username', 'is_active')` → Para buscar usernames activos
+- `Index('idx_created_at', 'created_at')` → Para reportes por fecha de registro
+- `Index('idx_last_login', 'last_login')` → Para reportes de actividad
+
+**CONFIGURACIÓN MYSQL:**
+- `mysql_engine': 'InnoDB'` → Motor que soporta transacciones y foreign keys
+- `mysql_charset': 'utf8mb4'` → Puede guardar emojis y caracteres especiales
+- `mysql_collate': 'utf8mb4_unicode_ci'` → Comparaciones case-insensitive
+- `mysql_row_format': 'DYNAMIC'` → Mejor rendimiento para campos variables
+
+**SIN ÍNDICES:** Consultas de login serían lentas (10ms → 1000ms)
+
+---
+
+## 🔥 **SECCIÓN 3: CAMPOS DE LA TABLA USUARIOS**
+
+### **Clave Primaria**
+```python
+# Líneas 56-62
+id: Mapped[int] = mapped_column(
+    Integer,
+    primary_key=True,
+    autoincrement=True,
+    comment="Identificador único del usuario"
+)
+```
+**QUÉ HACE:** Campo ID que se incrementa automáticamente
+**DESGLOSE:**
+- `Mapped[int]` → Type hint: este campo es un entero
+- `Integer` → Tipo de dato en MySQL
+- `primary_key=True` → Es la clave primaria (índice único automático)
+- `autoincrement=True` → MySQL asigna 1, 2, 3... automáticamente
+- `comment="..."` → Documentación en la base de datos
+
+### **Campos de Identificación**
+```python
+# Líneas 65-72
+username: Mapped[Optional[str]] = mapped_column(
+    String(30),
+    unique=True,
+    index=True,
+    nullable=True,
+    comment="Nombre de usuario único"
+)
+```
+**QUÉ HACE:** Nombre de usuario opcional pero único si se proporciona
+**DESGLOSE:**
+- `Optional[str]` → Puede ser None (el usuario puede usar solo email)
+- `String(30)` → Máximo 30 caracteres (usernames cortos son mejores)
+- `unique=True` → No pueden haber dos usuarios con el mismo username
+- `index=True` → Búsquedas rápidas por username
+- `nullable=True` → Puede estar vacío (usar solo email para login)
+
+**POR QUÉ OPCIONAL:** Algunos usuarios prefieren solo usar email
+
+```python
+# Líneas 74-81
+email: Mapped[str] = mapped_column(
+    String(255),
+    unique=True,
+    index=True,
+    nullable=False,
+    comment="Correo electrónico único del usuario"
+)
+```
+**QUÉ HACE:** Email obligatorio y único para cada usuario
+**DESGLOSE:**
+- `Mapped[str]` → Sin Optional = siempre debe tener valor
+- `String(255)` → Máximo 255 caracteres (estándar para emails)
+- `unique=True` → Un email = una cuenta (no duplicados)
+- `nullable=False` → Campo obligatorio
+**SIN unique:** Un email podría tener múltiples cuentas = caos
+
+### **Seguridad**
+```python
+# Líneas 84-90
+password: Mapped[str] = mapped_column(
+    String(255),  # Suficiente para hash bcrypt
+    nullable=False,
+    comment="Contraseña hasheada con bcrypt"
+)
+```
+**QUÉ HACE:** Contraseña hasheada, nunca en texto plano
+**POR QUÉ String(255):**
+- Hash bcrypt produce ~60 caracteres
+- 255 da margen para algoritmos futuros
+- El modelo anterior String(50) era demasiado corto
+**SIN HASH:** Contraseñas visibles = hackeo masivo
+
+### **Información Personal**
+```python
+# Líneas 93-101
+nombre: Mapped[Optional[str]] = mapped_column(
+    String(100),
+    nullable=True,
+    index=True,
+    comment="Nombre del usuario"
+)
+
+apellidos: Mapped[Optional[str]] = mapped_column(
+    String(100),
+    nullable=True,
+    index=True,
+    comment="Apellidos del usuario"
+)
+```
+**QUÉ HACE:** Campos separados para nombre y apellidos
+**POR QUÉ SEPARADOS:**
+- Permite búsquedas más precisas
+- Personalización mejor ("Hola Juan")
+- Reportes por apellido
+**POR QUÉ index=True:** Para búsquedas por nombre rápidas
+
+```python
+# Líneas 103-108
+avatar_url: Mapped[Optional[str]] = mapped_column(
+    Text,  # URLs pueden ser largas
+    nullable=True,
+    comment="URL del avatar del usuario"
+)
+```
+**QUÉ HACE:** URL de la imagen de perfil del usuario
+**POR QUÉ Text:** URLs de imágenes pueden ser muy largas (data URLs, servicios cloud)
+
+### **Estados y Control**
+```python
+# Líneas 111-118
+is_active: Mapped[bool] = mapped_column(
+    Boolean,
+    default=True,
+    nullable=False,
+    index=True,
+    comment="Estado activo del usuario"
+)
+```
+**QUÉ HACE:** Indica si el usuario está activo o suspendido
+**POR QUÉ default=True:** Usuarios nuevos están activos por defecto
+**USO PRÁCTICO:** Para suspender usuarios sin eliminar sus datos
+
+```python
+# Líneas 120-127
+is_verified: Mapped[bool] = mapped_column(
+    Boolean,
+    default=False,
+    nullable=False,
+    index=True,
+    comment="Indica si el email está verificado"
+)
+```
+**QUÉ HACE:** Verifica que el email realmente pertenece al usuario
+**POR QUÉ default=False:** Usuarios deben verificar email después de registro
+**USO:** Para enviar emails solo a usuarios verificados
+
+### **Seguridad y Auditoría**
+```python
+# Líneas 130-137
+last_login: Mapped[Optional[datetime]] = mapped_column(
+    DateTime(timezone=True),
+    nullable=True,
+    index=True,
+    comment="Fecha y hora del último acceso"
+)
+```
+**QUÉ HACE:** Registra cuándo fue el último login del usuario
+**POR QUÉ DateTime(timezone=True):** Para usuarios en diferentes zonas horarias
+**USO:** Reportes de actividad, detectar cuentas inactivas
+
+```python
+# Líneas 139-145
+login_attempts: Mapped[int] = mapped_column(
+    Integer,
+    default=0,
+    nullable=False,
+    comment="Número de intentos de login fallidos"
+)
+```
+**QUÉ HACE:** Cuenta intentos de login fallidos para bloquear ataques
+**LÓGICA:** 
+- Se incrementa en cada login fallido
+- Se resetea en login exitoso
+- Si llega a 5, se bloquea la cuenta
+
+### **Timestamps Automáticos**
+```python
+# Líneas 148-156
+created_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True),
+    server_default=func.now(),
+    nullable=False,
+    index=True,
+    comment="Fecha y hora de creación"
+)
+```
+**QUÉ HACE:** Se asigna automáticamente cuando se crea el usuario
+**POR QUÉ server_default=func.now():** MySQL asigna la fecha, no Python
+**VENTAJA:** Hora exacta del servidor, no del cliente
+
+```python
+# Líneas 158-166
+updated_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True),
+    server_default=func.now(),
+    onupdate=func.now(),
+    nullable=False,
+    comment="Fecha y hora de última actualización"
+)
+```
+**QUÉ HACE:** Se actualiza automáticamente en cada modificación
+**POR QUÉ onupdate=func.now():** MySQL actualiza automáticamente
+**USO:** Auditoría de cambios
+
+---
+
+## 🔥 **SECCIÓN 4: RELACIONES**
+
+```python
+# Líneas 169-174
+pets = relationship(
+    "Pet", 
+    back_populates="owner", 
+    cascade="all, delete-orphan",
+    lazy="select"  # Optimización para MySQL
+)
+```
+**QUÉ HACE:** Conecta el usuario con sus mascotas
+**DESGLOSE:**
+- `"Pet"` → String porque Pet se define en otro archivo
+- `back_populates="owner"` → Pet tiene un campo owner que apunta aquí
+- `cascade="all, delete-orphan"` → Si eliminas usuario, elimina sus mascotas
+- `lazy="select"` → Carga las mascotas solo cuando las necesitas
+
+**USO PRÁCTICO:**
+```python
+user = session.query(User).first()
+print(user.pets)  # Lista de mascotas del usuario
+```
+
+---
+
+## 🔥 **SECCIÓN 5: MÉTODOS DE AUTENTICACIÓN**
+
+### **Método authenticate (Líneas 177-206)**
+```python
+@classmethod
+def authenticate(cls, db: Session, email: str, password: str) -> Optional["User"]:
+```
+**QUÉ HACE:** Método de clase para autenticar usuarios
+**POR QUÉ @classmethod:** Se llama en la clase, no en una instancia
+**PARÁMETROS:**
+- `db: Session` → Conexión a la base de datos
+- `email: str` → Email del usuario
+- `password: str` → Contraseña en texto plano
+**RETORNA:** Usuario autenticado o None si falla
+
+```python
+# Líneas 188-192
+user = db.query(cls).filter(
+    cls.email == email,
+    cls.is_active == True
+).first()
+```
+**QUÉ HACE:** Busca usuario activo por email
+**POR QUÉ is_active == True:** No autentica usuarios suspendidos
+**RESULTADO:** Un usuario o None
+
+```python
+# Líneas 194-196
+if not user:
+    return None
+```
+**QUÉ HACE:** Si no encuentra usuario, retorna None
+**POR QUÉ:** Evita procesar contraseñas para usuarios inexistentes
+
+```python
+# Líneas 198-200
+if user.is_account_locked():
+    return None
+```
+**QUÉ HACE:** Verifica si la cuenta está bloqueada por intentos fallidos
+**LÓGICA:** 5 intentos = cuenta bloqueada temporalmente
+
+```python
+# Líneas 202-208
+if user.check_password(password):
+    # Resetear intentos de login y actualizar último acceso
+    user.reset_login_attempts()
+    user.last_login = datetime.now()
+    db.commit()
+    return user
+```
+**QUÉ HACE:** Si la contraseña es correcta:
+1. Resetea intentos fallidos a 0
+2. Actualiza la fecha de último login
+3. Guarda cambios en la DB
+4. Retorna el usuario autenticado
+
+```python
+# Líneas 209-213
+else:
+    # Incrementar intentos fallidos
+    user.increment_login_attempts()
+    db.commit()
+    return None
+```
+**QUÉ HACE:** Si la contraseña es incorrecta:
+1. Incrementa el contador de intentos fallidos
+2. Guarda el cambio en la DB
+3. Retorna None (login fallido)
+
+### **Método create_password (Líneas 215-226)**
+```python
+@classmethod
+def create_password(cls, password: str) -> str:
+```
+**QUÉ HACE:** Convierte contraseña en texto plano a hash seguro
+**POR QUÉ @classmethod:** No necesita una instancia de usuario
+
+```python
+# Líneas 225-229
+hashed_password = bcrypt.hashpw(
+    password.encode('utf-8'), 
+    bcrypt.gensalt(rounds=12)
+)
+return hashed_password.decode('utf-8')
+```
+**QUÉ HACE:** Crea hash bcrypt con salt aleatorio
+**DESGLOSE:**
+- `password.encode('utf-8')` → Convierte string a bytes
+- `bcrypt.gensalt(rounds=12)` → Genera salt con complejidad 12
+- `rounds=12` → Balance entre seguridad y velocidad
+- `.decode('utf-8')` → Convierte bytes de vuelta a string para guardar
+
+**POR QUÉ rounds=12:**
+- rounds=10 → 0.1 segundos
+- rounds=12 → 0.3 segundos (producción recomendado)
+- rounds=15 → 2.5 segundos (muy lento)
+
+### **Método check_password (Líneas 231-246)**
+```python
+def check_password(self, password: str) -> bool:
+```
+**QUÉ HACE:** Verifica si una contraseña coincide con el hash almacenado
+**POR QUÉ método de instancia:** Necesita acceso a self.password
+
+```python
+# Líneas 241-246
+try:
+    return bcrypt.checkpw(
+        password.encode('utf-8'), 
+        self.password.encode('utf-8')
+    )
+except Exception:
+    return False
+```
+**QUÉ HACE:** Compara contraseña con hash de forma segura
+**POR QUÉ try/except:** Si el hash está corrupto, no crashea la app
+
+### **Métodos de Bloqueo de Cuenta (Líneas 248-264)**
+```python
+def is_account_locked(self) -> bool:
+    MAX_LOGIN_ATTEMPTS = 5
+    return self.login_attempts >= MAX_LOGIN_ATTEMPTS
+```
+**QUÉ HACE:** Verifica si la cuenta está bloqueada
+**LÓGICA:** 5 o más intentos fallidos = cuenta bloqueada
+
+```python
+def reset_login_attempts(self) -> None:
+    self.login_attempts = 0
+```
+**QUÉ HACE:** Resetea contador después de login exitoso
+
+```python
+def increment_login_attempts(self) -> None:
+    self.login_attempts += 1
+```
+**QUÉ HACE:** Incrementa contador después de login fallido
+
+---
+
+## 🔥 **SECCIÓN 6: PROPIEDADES Y UTILIDADES**
+
+### **Propiedad nombre_completo (Líneas 266-277)**
+```python
+@property
+def nombre_completo(self) -> str:
+    parts = []
+    if self.nombre:
+        parts.append(self.nombre)
+    if self.apellidos:
+        parts.append(self.apellidos)
+    return " ".join(parts) if parts else self.email
+```
+**QUÉ HACE:** Retorna nombre completo o email si no hay nombre
+**LÓGICA:**
+1. Crea lista vacía
+2. Agrega nombre si existe
+3. Agrega apellidos si existen
+4. Une con espacios o usa email como fallback
+
+**USO:**
+```python
+user = User(email="juan@email.com", nombre="Juan", apellidos="Pérez")
+print(user.nombre_completo)  # "Juan Pérez"
+
+user2 = User(email="maria@email.com")
+print(user2.nombre_completo)  # "maria@email.com"
+```
+
+### **Método to_dict (Líneas 279-307)**
+```python
+def to_dict(self, include_sensitive: bool = False) -> dict:
+```
+**QUÉ HACE:** Convierte el usuario a diccionario para APIs JSON
+**POR QUÉ include_sensitive:** Controla si incluir datos internos
+
+```python
+# Líneas 287-299
+data = {
+    'id': self.id,
+    'username': self.username,
+    'email': self.email,
+    'nombre': self.nombre,
+    'apellidos': self.apellidos,
+    'nombre_completo': self.nombre_completo,
+    'avatar_url': self.avatar_url,
+    'is_active': self.is_active,
+    'is_verified': self.is_verified,
+    'last_login': self.last_login.isoformat() if self.last_login else None,
+    'created_at': self.created_at.isoformat(),
+    'updated_at': self.updated_at.isoformat()
+}
+```
+**QUÉ HACE:** Crea diccionario con datos seguros para mostrar al usuario
+**NOTA:** NO incluye password ni login_attempts por seguridad
+
+```python
+# Líneas 301-306
+if include_sensitive:
+    data.update({
+        'login_attempts': self.login_attempts,
+        'is_account_locked': self.is_account_locked()
+    })
+```
+**QUÉ HACE:** Si include_sensitive=True, incluye datos administrativos
+**USO:** Para paneles de administración
+
+### **Método __repr__ (Líneas 309-311)**
+```python
+def __repr__(self) -> str:
+    identifier = self.username or self.email
+    return f"<Usuario(id={self.id}, identifier='{identifier}', active={self.is_active})>"
+```
+**QUÉ HACE:** Representación string para debugging
+**RESULTADO:** `<Usuario(id=1, identifier='juan@email.com', active=True)>`
+
+---
+
+## 🔥 **SECCIÓN 7: OPERACIONES CRUD COMPLETAS**
+
+### **CREATE: Registrar nuevo usuario**
+```python
+def register_user(email: str, password: str, nombre: str = None, apellidos: str = None):
+    session = SessionLocal()
+    try:
+        # 1. Verificar que el email no existe
+        existing_user = session.query(User).filter(User.email == email).first()
+        if existing_user:
+            raise ValueError(f"Ya existe un usuario con el email {email}")
+        
+        # 2. Crear nuevo usuario
+        user = User(
+            email=email,
+            password=User.create_password(password),  # Hash automático
+            nombre=nombre,
+            apellidos=apellidos,
+            is_active=True,
+            is_verified=False  # Debe verificar email
+        )
+        
+        # 3. Guardar en base de datos
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        
+        print(f"Usuario {user.nombre_completo} registrado exitosamente")
+        return user
+        
+    except IntegrityError as e:
+        session.rollback()
+        if "email" in str(e.orig):
+            raise ValueError("Email ya está en uso")
+        else:
+            raise ValueError("Error de datos duplicados")
+    
+    except Exception as e:
+        session.rollback()
+        raise e
+    
+    finally:
+        session.close()
+
+# USO
+new_user = register_user(
+    email="juan@email.com",
+    password="MiPassword123!",
+    nombre="Juan",
+    apellidos="Pérez"
+)
+```
+
+### **READ: Buscar y consultar usuarios**
+```python
+def get_user_by_email(email: str):
+    session = SessionLocal()
+    try:
+        user = session.query(User)\
+            .filter(User.email == email)\
+            .filter(User.is_active == True)\
+            .first()
+        
+        return user
+    finally:
+        session.close()
+
+def search_users(query: str, limit: int = 50):
+    session = SessionLocal()
+    try:
+        # Buscar en nombre, apellidos y email
+        users = session.query(User)\
+            .filter(
+                or_(
+                    User.nombre.ilike(f"%{query}%"),
+                    User.apellidos.ilike(f"%{query}%"),
+                    User.email.ilike(f"%{query}%")
+                )
+            )\
+            .filter(User.is_active == True)\
+            .order_by(User.nombre, User.apellidos)\
+            .limit(limit)\
+            .all()
+        
+        return users
+    finally:
+        session.close()
+
+def get_inactive_users_since(days: int = 30):
+    session = SessionLocal()
+    try:
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        users = session.query(User)\
+            .filter(User.last_login < cutoff_date)\
+            .filter(User.is_active == True)\
+            .order_by(User.last_login)\
+            .all()
+        
+        return users
+    finally:
+        session.close()
+```
+
+### **UPDATE: Actualizar datos de usuario**
+```python
+def update_user_profile(user_id: int, **kwargs):
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("Usuario no encontrado")
+        
+        # Campos permitidos para actualizar
+        allowed_fields = ['nombre', 'apellidos', 'avatar_url']
+        
+        for field, value in kwargs.items():
+            if field in allowed_fields:
+                setattr(user, field, value)
+        
+        session.commit()
+        session.refresh(user)
+        
+        return user
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+def change_user_password(user_id: int, old_password: str, new_password: str):
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("Usuario no encontrado")
+        
+        # Verificar contraseña actual
+        if not user.check_password(old_password):
+            raise ValueError("Contraseña actual incorrecta")
+        
+        # Cambiar contraseña
+        user.password = User.create_password(new_password)
+        user.reset_login_attempts()  # Resetear intentos por seguridad
+        
+        session.commit()
+        
+        print("Contraseña cambiada exitosamente")
+        return user
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+def verify_user_email(user_id: int):
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("Usuario no encontrado")
+        
+        user.is_verified = True
+        session.commit()
+        
+        print(f"Email de {user.email} verificado exitosamente")
+        return user
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+```
+
+### **DELETE: Desactivar/eliminar usuarios**
+```python
+def deactivate_user(user_id: int, reason: str = None):
+    """Desactiva usuario sin eliminar datos"""
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("Usuario no encontrado")
+        
+        user.is_active = False
+        session.commit()
+        
+        print(f"Usuario {user.email} desactivado. Razón: {reason}")
+        return user
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+def permanently_delete_user(user_id: int):
+    """ELIMINA PERMANENTEMENTE el usuario y TODAS sus mascotas"""
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("Usuario no encontrado")
+        
+        user_email = user.email
+        pet_count = len(user.pets)
+        
+        # Cascade eliminará automáticamente las mascotas relacionadas
+        session.delete(user)
+        session.commit()
+        
+        print(f"Usuario {user_email} y {pet_count} mascotas eliminados permanentemente")
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+```
+
+---
+
+## 🔥 **SECCIÓN 8: LÓGICA DE AUTENTICACIÓN AVANZADA**
+
+### **Sistema de Login con Bloqueo**
+```python
+def login_user(email: str, password: str):
+    """Login con sistema de bloqueo automático"""
+    session = SessionLocal()
+    try:
+        # Intentar autenticar
+        user = User.authenticate(session, email, password)
+        
+        if user:
+            return {
+                "success": True,
+                "user": user.to_dict(),
+                "message": "Login exitoso"
+            }
+        else:
+            # Verificar por qué falló
+            user = session.query(User)\
+                .filter(User.email == email)\
+                .filter(User.is_active == True)\
+                .first()
+            
+            if not user:
+                return {
+                    "success": False,
+                    "message": "Email no registrado o usuario inactivo"
+                }
+            elif user.is_account_locked():
+                return {
+                    "success": False,
+                    "message": f"Cuenta bloqueada por {user.login_attempts} intentos fallidos. Contacta soporte."
+                }
+            else:
+                attempts_left = 5 - user.login_attempts
+                return {
+                    "success": False,
+                    "message": f"Contraseña incorrecta. Te quedan {attempts_left} intentos."
+                }
+                
+    finally:
+        session.close()
+
+# USO
+result = login_user("juan@email.com", "password_incorrecto")
+print(result)
+# {'success': False, 'message': 'Contraseña incorrecta. Te quedan 4 intentos.'}
+```
+
+### **Reset de Contraseña**
+```python
+def request_password_reset(email: str):
+    """Genera token para reset de contraseña"""
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.email == email).first()
+        if not user:
+            # No revelar si el email existe (seguridad)
+            return {"message": "Si el email existe, recibirás instrucciones"}
+        
+        # Generar token único (en producción usar JWT o UUID)
+        import secrets
+        reset_token = secrets.token_urlsafe(32)
+        
+        # Aquí guardarías el token en DB con expiración
+        # y enviarías email al usuario
+        
+        print(f"Token de reset para {email}: {reset_token}")
+        return {"message": "Si el email existe, recibirás instrucciones"}
+        
+    finally:
+        session.close()
+
+def unlock_user_account(user_id: int):
+    """Desbloquear cuenta manualmente (admin)"""
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("Usuario no encontrado")
+        
+        user.reset_login_attempts()
+        session.commit()
+        
+        print(f"Cuenta de {user.email} desbloqueada")
+        return user
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+```
+
+---
+
+## 🔥 **SECCIÓN 9: REPORTES Y ANÁLISIS**
+
+### **Estadísticas de Usuarios**
+```python
+def get_user_statistics():
+    session = SessionLocal()
+    try:
+        from sqlalchemy import func
+        
+        stats = session.query(
+            func.count(User.id).label('total_users'),
+            func.count(User.id).filter(User.is_active == True).label('active_users'),
+            func.count(User.id).filter(User.is_verified == True).label('verified_users'),
+            func.count(User.id).filter(User.login_attempts >= 5).label('locked_accounts')
+        ).first()
+        
+        return {
+            "total_users": stats.total_users,
+            "active_users": stats.active_users,
+            "verified_users": stats.verified_users,
+            "locked_accounts": stats.locked_accounts,
+            "verification_rate": (stats.verified_users / stats.total_users * 100) if stats.total_users > 0 else 0
+        }
+        
+    finally:
+        session.close()
+
+def get_registration_trends(days: int = 30):
+    session = SessionLocal()
+    try:
+        from sqlalchemy import func
+        from datetime import timedelta
+        
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        trends = session.query(
+            func.date(User.created_at).label('date'),
+            func.count(User.id).label('registrations')
+        )\
+        .filter(User.created_at >= cutoff_date)\
+        .group_by(func.date(User.created_at))\
+        .order_by(func.date(User.created_at))\
+        .all()
+        
+        return [{
+            "date": trend.date.isoformat(),
+            "registrations": trend.registrations
+        } for trend in trends]
+        
+    finally:
+        session.close()
+```
+
+---
+
+## 🔥 **SECCIÓN 10: TESTING PARA USUARIOS**
+
+### **Tests Unitarios Específicos**
+```python
+# test_user_model.py
+import pytest
+from datetime import datetime, timedelta
+from models.user import User
+from config.database import SessionLocal, Base, engine
+
+@pytest.fixture
+def test_session():
+    Base.metadata.create_all(bind=engine)
+    session = SessionLocal()
+    yield session
+    session.close()
+    Base.metadata.drop_all(bind=engine)
+
+def test_create_user(test_session):
+    # Test creación de usuario válido
+    user = User(
+        email="test@example.com",
+        password=User.create_password("password123"),
+        nombre="Test",
+        apellidos="User"
+    )
+    
+    test_session.add(user)
+    test_session.commit()
+    test_session.refresh(user)
+    
+    assert user.id is not None
+    assert user.email == "test@example.com"
+    assert user.is_active == True
+    assert user.is_verified == False
+    assert user.login_attempts == 0
+
+def test_password_hashing():
+    # Test que las contraseñas se hashean correctamente
+    password = "my_secure_password"
+    hashed = User.create_password(password)
+    
+    assert hashed != password  # Hash diferente a original
+    assert len(hashed) > 50     # Hash bcrypt es largo
+    
+    # Crear usuario y verificar password
+    user = User(email="test@test.com", password=hashed)
+    assert user.check_password(password) == True
+    assert user.check_password("wrong_password") == False
+
+def test_authentication_success(test_session):
+    # Test autenticación exitosa
+    user = User(
+        email="auth@test.com",
+        password=User.create_password("correct_password")
+    )
+    test_session.add(user)
+    test_session.commit()
+    
+    # Autenticar
+    auth_user = User.authenticate(test_session, "auth@test.com", "correct_password")
+    
+    assert auth_user is not None
+    assert auth_user.id == user.id
+    assert auth_user.last_login is not None
+    assert auth_user.login_attempts == 0
+
+def test_authentication_failure(test_session):
+    # Test autenticación fallida
+    user = User(
+        email="auth@test.com",
+        password=User.create_password("correct_password")
+    )
+    test_session.add(user)
+    test_session.commit()
+    
+    # Intentos fallidos
+    for i in range(3):
+        auth_user = User.authenticate(test_session, "auth@test.com", "wrong_password")
+        assert auth_user is None
+    
+    # Verificar que se incrementaron los intentos
+    test_session.refresh(user)
+    assert user.login_attempts == 3
+
+def test_account_locking(test_session):
+    # Test bloqueo de cuenta
+    user = User(
+        email="lock@test.com",
+        password=User.create_password("password")
+    )
+    test_session.add(user)
+    test_session.commit()
+    
+    # 5 intentos fallidos
+    for i in range(5):
+        User.authenticate(test_session, "lock@test.com", "wrong")
+    
+    test_session.refresh(user)
+    assert user.is_account_locked() == True
+    
+    # Sexto intento debe fallar incluso con contraseña correcta
+    auth_user = User.authenticate(test_session, "lock@test.com", "password")
+    assert auth_user is None
+
+def test_nombre_completo_property():
+    # Test propiedad nombre_completo
+    user1 = User(email="test1@test.com", nombre="Juan", apellidos="Pérez")
+    assert user1.nombre_completo == "Juan Pérez"
+    
+    user2 = User(email="test2@test.com", nombre="María")
+    assert user2.nombre_completo == "María"
+    
+    user3 = User(email="test3@test.com")
+    assert user3.nombre_completo == "test3@test.com"
+
+def test_to_dict_serialization():
+    # Test serialización a diccionario
+    user = User(
+        email="serialize@test.com",
+        nombre="Test",
+        apellidos="User",
+        is_verified=True
+    )
+    
+    # Datos públicos
+    public_data = user.to_dict()
+    assert "password" not in public_data
+    assert "login_attempts" not in public_data
+    assert public_data["email"] == "serialize@test.com"
+    assert public_data["nombre_completo"] == "Test User"
+    
+    # Datos sensibles
+    sensitive_data = user.to_dict(include_sensitive=True)
+    assert "login_attempts" in sensitive_data
+    assert "is_account_locked" in sensitive_data
+
+# Ejecutar tests
+# pytest test_user_model.py -v
+```
+
+---
+
+## 💡 **RESUMEN: ARQUITECTURA COMPLETA DEL MODELO USER**
+
+### **🔒 SEGURIDAD (Todo lo que protege la app)**
+- ✅ **Contraseñas hasheadas** con bcrypt (nunca texto plano)
+- ✅ **Bloqueo automático** después de 5 intentos fallidos
+- ✅ **Validación de usuarios activos** (no autentica suspendidos)
+- ✅ **Salt automático** en cada hash de contraseña
+- ✅ **Serialización segura** (password nunca se expone en APIs)
+
+### **📊 OPTIMIZACIÓN (Todo lo que hace la app rápida)**
+- ✅ **Índices compuestos** para consultas de login frecuentes
+- ✅ **Motor InnoDB** para transacciones y foreign keys
+- ✅ **Charset utf8mb4** para emojis y caracteres especiales
+- ✅ **Timestamps automáticos** del servidor (precisión)
+- ✅ **Lazy loading** en relaciones (carga solo lo necesario)
+
+### **🛠️ FUNCIONALIDAD (Todo lo que la app puede hacer)**
+- ✅ **Registro con validaciones** automáticas
+- ✅ **Login con bloqueo** anti-ataques de fuerza bruta
+- ✅ **Gestión de perfiles** (nombre, avatar, etc.)
+- ✅ **Sistema de verificación** de email
+- ✅ **Auditoría completa** (último login, fecha creación)
+- ✅ **Reportes y estadísticas** de usuarios
+
+### **🔗 INTEGRIDAD (Todo lo que mantiene datos consistentes)**
+- ✅ **Relaciones con cascade** (eliminar usuario = eliminar mascotas)
+- ✅ **Constraints únicos** (un email = una cuenta)
+- ✅ **Type hints completos** (IDE ayuda, menos bugs)
+- ✅ **Manejo de errores** robusto en todas las operaciones
+- ✅ **Tests unitarios** que verifican cada funcionalidad
+
+**CADA LÍNEA DEL MODELO TIENE UN PROPÓSITO ESPECÍFICO EN PRODUCCIÓN** 🔥
+
+NO VA EN EL MODELO:
+Las funciones CRUD como register_user(), login_user(), get_user_statistics(), etc.
+
+📁 DÓNDE VAN REALMENTE ESAS FUNCIONES:
+tu_proyecto/
+├── models/
+│   └── user.py              # ← Tu modelo User 
+├── services/                # ← Aquí van las funciones CRUD
+│   ├── user_service.py      # ← register_user(), login_user()
+│   └── auth_service.py      # ← reset_password(), unlock_account()
+├── repositories/            # ← O aquí (patrón repository)
+│   └── user_repository.py   # ← get_user_by_email(), search_users()
+└── tests/
+    └── test_user.py         # ← Tests unitarios
