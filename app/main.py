@@ -34,7 +34,17 @@ def health_check():
     """Health Check"""
     return {"status": "ok"}
 
-Base.metadata.create_all(bind=engine)
+import os
+from config.database_config import database_config
+from config.enums import Entorno
+
+# Solo crear tablas en desarrollo local con SQLite
+config = database_config()
+if config.obtener_entorno() == Entorno.DESARROLLO and not os.getenv("USE_MYSQL", "true").lower() == "true":
+    Base.metadata.create_all(bind=engine)
+    print("📊 Tablas SQLite creadas (modo desarrollo)")
+else:
+    print("🐬 Usando MySQL - Las tablas ya deben existir")
 
 
 """
