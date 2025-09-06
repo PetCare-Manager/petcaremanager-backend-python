@@ -5,10 +5,10 @@ Provides endpoints for user registration, retrieval, and authentication.
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from config.database import get_db
+from app.config.database import get_db
 from middlewares.jwt_bearer import JWTBearer
 from schemas.user import UserLogin, User, UserUpdate
-from models.user import User as UserModel
+from app.models.user import User as UserModel
 from services.user import UserService
 from utils.jwt_manager import create_token
 

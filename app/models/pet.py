@@ -13,7 +13,7 @@ from sqlalchemy import (
     Text
 )
 from sqlalchemy.orm import relationship, mapped_column, Mapped
-from config.database import Base
+from app.config.database import Base
 from app.models.user import User 
 
 # Enumeración para definir los géneros de las mascotas

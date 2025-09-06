@@ -5,8 +5,8 @@ Routes and logic for password reset functionality in the PetCare Manager applica
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from config.database import get_db
-from models.user import User as UserModel
+from app.config.database import get_db
+from app.models.user import User as UserModel
 from schemas.password import PasswordResetConfirm, PasswordResetRequest
 from services.user import UserService
 from utils.email_service import send_password_reset_email, send_email_by_sengrid
