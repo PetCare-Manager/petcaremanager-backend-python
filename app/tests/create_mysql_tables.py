@@ -1,9 +1,15 @@
 """
 Script para crear las tablas en MySQL
 """
-from ..config.database import engine, Base, DATABASE_URL
-from ..models.user import User
-from ..models.pet import Pet, MedicalInfo, Document, Event
+import sys
+import os
+
+# Agregar el directorio padre al path para permitir importaciones absolutas
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from app.config.database import engine, Base, DATABASE_URL
+from app.models.user import User
+from app.models.pet import Pet, MedicalInfo, Document, Event
 
 def create_tables():
     print(f"🔨 Creando tablas en: {DATABASE_URL}")
@@ -27,3 +33,6 @@ def create_tables():
 
 if __name__ == "__main__":
     create_tables()
+
+ #uvicorn main:app --reload
+# Verificar http://localhost:8000/health
