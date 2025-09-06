@@ -1,7 +1,7 @@
 """
 Script para crear las tablas en MySQL
 """
-from app.config.database import engine, Base, DATABASE_URL
+from config.database import engine, Base, DATABASE_URL
 from app.models.user import User
 from app.models.pet import Pet, MedicalInfo, Document, Event
 
