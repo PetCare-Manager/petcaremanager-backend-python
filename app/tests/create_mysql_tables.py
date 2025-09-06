@@ -2,8 +2,8 @@
 Script para crear las tablas en MySQL
 """
 from app.config.database import engine, Base, DATABASE_URL
-from models.user import User
-from models.pet import Pet, MedicalInfo, Document, Event
+from app.models.user import User
+from app.models.pet import Pet, MedicalInfo, Document, Event
 
 def create_tables():
     print(f"🔨 Creando tablas en: {DATABASE_URL}")
