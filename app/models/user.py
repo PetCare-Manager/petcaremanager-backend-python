@@ -8,7 +8,7 @@ import bcrypt
 from sqlalchemy import String, Text, Boolean, DateTime, Integer, Index
 from sqlalchemy.orm import Session, relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
-from config.database import Base
+from app.config.database import Base
 
 
 class User(Base):
@@ -41,7 +41,8 @@ class User(Base):
         increment_login_attempts: Incrementar intentos de login
     """
     
-    __tablename__ = "usuarios"
+    __tablename__ = 'users'
+    
     
     # Configuración específica para MySQL
     __table_args__ = (
@@ -56,7 +57,8 @@ class User(Base):
             'mysql_engine': 'InnoDB',
             'mysql_charset': 'utf8mb4',
             'mysql_collate': 'utf8mb4_unicode_ci',
-            'mysql_row_format': 'DYNAMIC'
+            'mysql_row_format': 'DYNAMIC',
+            'extend_existing': True 
         }
     )
 
@@ -148,6 +150,7 @@ class User(Base):
     # Timestamps automáticos
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=func.now(),    
         server_default=func.now(),
         nullable=False,
         index=True,
@@ -156,6 +159,7 @@ class User(Base):
     
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=func.now(),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
@@ -311,6 +315,16 @@ class User(Base):
             
         return data
 
+    """
+    El método __repr__ define cómo se representa textualmente un objeto cuando se imprime o se muestra en el debugger. Su propósito principal es proporcionar una representación clara y útil del objeto para desarrolladores durante el debugging y logging. 
+    Cumple el mismo rol que toString() en Java: hacer que los objetos se muestren de forma legible en lugar de como referencias de memoria.
+    En este caso específico:
+
+    Identifica el objeto: Muestra el ID y un identificador (username o email)
+    Facilita el debugging: Cuando imprimes el objeto, ves información útil en lugar de algo como <__main__.Usuario object at 0x7f8b8c0d5f40>
+    Mejora el logging: Los logs muestran información legible del usuario
+    Ayuda en desarrollo: En consolas interactivas y debuggers, puedes identificar rápidamente qué objeto estás manejando
+    """
     def __repr__(self) -> str:
         """Representación string del objeto Usuario."""
         identifier = self.username or self.email

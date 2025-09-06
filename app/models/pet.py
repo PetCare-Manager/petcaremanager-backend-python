@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from config.database import Base
-from models.user import User 
+from app.models.user import User 
 
 # Enumeración para definir los géneros de las mascotas
 class Gender(PyEnum):
@@ -30,12 +30,14 @@ class Pet(Base):
     con otros modelos como información médica, documentos y eventos.
     """
     __tablename__ = "pets"
+   
     
     # Configuración específica para MySQL con codificación UTF-8
     __table_args__ = {
         "mysql_engine": "InnoDB",           # Motor de almacenamiento InnoDB para transacciones
         "mysql_charset": "utf8mb4",         # Conjunto de caracteres completo UTF-8
-        "mysql_collate": "utf8mb4_unicode_ci"  # Collation para comparaciones Unicode
+        "mysql_collate": "utf8mb4_unicode_ci",  # Collation para comparaciones Unicode
+        "extend_existing": True # Permite extender la tabla si ya existe asi como evitar warnings para tests
     }
 
     # Campos de la tabla pets
