@@ -1,0 +1,340 @@
+Excelente pregunta. La estructura de carpetas en el proyecto sigue los principios **SOLID** y las mejores prácticas de **arquitectura limpia**. Te explico el propósito de cada carpeta:
+
+## 📁 Estructura del Proyecto y su Propósito
+
+### 1. **`config/`** - Configuración Centralizada
+```
+config/
+├── database.py          # Conexión a BD
+├── database_config.py   # Configuración de BD
+├── enums.py            # Enumeraciones
+└── exceptions.py       # Excepciones personalizadas
+```
+**¿Por qué?**
+- **Principio de Responsabilidad Única (SRP)**: Cada archivo tiene una sola responsabilidad
+- **Separación de concerns**: La configuración está separada de la lógica de negocio
+- **Facilita testing**: Puedes mockear la configuración fácilmente
+- **Mantenibilidad**: Cambios en la BD no afectan otros módulos
+
+### 2. **`models/`** - Modelos de Datos (ORM)
+```
+models/
+├── user.py    # Modelo de Usuario
+├── pet.py     # Modelos de Mascota, MedicalInfo, Document, Event
+└── __init__.py
+```
+**¿Por qué?**
+- **Representa la estructura de la BD** en código Python
+- **Principio DRY**: Define la estructura una vez, úsala en toda la app
+- **Type safety**: Con SQLAlchemy Mapped, tienes tipado estático
+- **Migración fácil**: Los modelos son la fuente de verdad
+
+### 3. **`schemas/`** - Validación de Datos (Pydantic)
+```
+schemas/
+├── user.py     # UserCreate, UserResponse, etc.
+├── pet.py      # PetCreate, PetResponse, etc.
+└── password.py # PasswordReset, etc.
+```
+**¿Por qué?**
+- **Validación automática**: Pydantic valida los datos de entrada/salida
+- **Documentación automática**: FastAPI genera docs desde estos schemas
+- **Separación**: Los schemas son para API, los models para BD
+- **Seguridad**: Controlas qué campos expones (ej: no exponer passwords)
+
+### 4. **`services/`** - Lógica de Negocio
+```
+services/
+├── user.py    # Lógica de usuarios
+├── pet.py     # Lógica de mascotas
+└── __init__.py
+```
+**¿Por qué?**
+- **Principio de Inversión de Dependencias (DIP)**: Los routers dependen de servicios, no de la BD directamente
+- **Reusabilidad**: La lógica puede usarse desde diferentes endpoints
+- **Testing**: Puedes testear la lógica sin FastAPI
+- **Transacciones complejas**: Maneja operaciones que involucran múltiples modelos
+
+### 5. **`routers/`** - Endpoints de la API
+```
+routers/
+├── user.py     # Endpoints /api/users/*
+├── pet.py      # Endpoints /api/pets/*
+└── password.py # Endpoints /api/auth/password/*
+```
+**¿Por qué?**
+- **Organización**: Agrupa endpoints relacionados
+- **Modularidad**: Puedes activar/desactivar features fácilmente
+- **Versionado**: Facilita crear v1, v2 de la API
+- **Principio Abierto/Cerrado**: Agregas nuevos routers sin modificar main.py
+
+### 6. **`middlewares/`** - Procesamiento de Requests/Responses
+```
+middlewares/
+├── cors.py              # Configuración CORS
+├── error_handler.py     # Manejo global de errores
+├── exception_handlers.py # Handlers específicos
+└── jwt_bearer.py        # Autenticación JWT
+```
+**¿Por qué?**
+- **Cross-cutting concerns**: Funcionalidad que aplica a toda la app
+- **Principio DRY**: No repites validación de JWT en cada endpoint
+- **Seguridad centralizada**: Un lugar para toda la seguridad
+- **Logging y monitoring**: Fácil agregar métricas
+
+### 7. **`utils/`** - Utilidades y Helpers
+```
+utils/
+├── cloudinary_config.py  # Config de Cloudinary
+├── email_service.py      # Envío de emails
+├── jwt_manager.py        # Generación/validación JWT
+└── upload_service.py     # Manejo de uploads
+```
+**¿Por qué?**
+- **Funciones auxiliares**: Código que no encaja en otras categorías
+- **Integración con terceros**: Aísla dependencias externas
+- **Reusabilidad**: Funciones usadas en múltiples lugares
+
+### 8. **`tests/`** - Pruebas Automatizadas
+```
+tests/
+├── test_user.py
+├── test_pet.py
+└── conftest.py  # Configuración de pytest
+```
+**¿Por qué?**
+- **Calidad**: Asegura que el código funciona
+- **Regresión**: Detecta cuando algo se rompe
+- **Documentación viva**: Los tests muestran cómo usar el código
+- **CI/CD**: Automatización de deployments
+
+## 🏗️ Beneficios de esta Arquitectura
+
+### 1. **Escalabilidad**
+- Agregar nuevas features es fácil
+- No necesitas tocar código existente
+- Cada módulo puede crecer independientemente
+
+### 2. **Mantenibilidad**
+- Sabes dónde buscar cada cosa
+- Los cambios están localizados
+- Fácil de entender para nuevos desarrolladores
+
+### 3. **Testabilidad**
+- Cada capa se puede testear por separado
+- Puedes usar mocks e inyección de dependencias
+- Tests más rápidos y confiables
+
+### 4. **Trabajo en Equipo**
+- Múltiples desarrolladores pueden trabajar sin conflictos
+- Clara separación de responsabilidades
+- Menos merge conflicts
+
+### 5. **Migración a MySQL**
+- Solo necesitas cambiar `config/`
+- Los modelos ya están preparados
+- Services y routers no cambian
+
+## 📊 Flujo de una Request
+
+```
+Cliente → Router → Middleware → Service → Model → Database
+           ↓          ↓           ↓         ↓
+        Schema    JWT/CORS    Business   ORM
+                              Logic
+```
+
+Esta arquitectura te permite:
+- **Cambiar la BD** sin tocar routers
+- **Cambiar la lógica** sin tocar modelos
+- **Agregar features** sin romper existentes
+- **Testear cada capa** independientemente
+
+Excelente pregunta. **No hay una única respuesta "correcta"** - la estructura que tienes se basa en varios patrones y convenciones que han evolucionado con el tiempo. Te explico:
+
+## 🏛️ Patrones de Arquitectura Base
+
+### 1. **Layered Architecture (Arquitectura por Capas)**
+Este es el patrón principal que estás usando:
+
+```
+┌─────────────────────────┐
+│   Presentation Layer    │  → Routers (Controllers)
+├─────────────────────────┤
+│    Business Layer       │  → Services
+├─────────────────────────┤
+│     Data Layer          │  → Models/Schemas
+├─────────────────────────┤
+│    Infrastructure       │  → Config/Database/Utils
+└─────────────────────────┘
+```
+
+### 2. **MVC Adaptado (Model-View-Controller)**
+FastAPI adapta MVC así:
+- **Model**: `models/` (ORM) + `schemas/` (DTOs)
+- **View**: Los responses JSON (no hay templates HTML)
+- **Controller**: `routers/`
+
+### 3. **Domain-Driven Design (DDD) - Simplificado**
+- Cada "dominio" (user, pet) tiene sus propios archivos
+- Separación por contexto de negocio
+
+## 📚 ¿De dónde vienen estas convenciones?
+
+### 1. **FastAPI Best Practices**
+La documentación oficial sugiere:
+```python
+project/
+├── app/
+│   ├── main.py
+│   ├── models/
+│   ├── schemas/
+│   ├── routers/
+│   └── dependencies/
+```
+
+### 2. **Flask/Django Influence**
+Muchos desarrolladores Python vienen de:
+- **Django**: apps/, models.py, views.py, urls.py
+- **Flask**: blueprints, models, views
+
+### 3. **Clean Architecture (Uncle Bob)**
+```
+├── entities/        → models/
+├── use_cases/       → services/
+├── controllers/     → routers/
+├── frameworks/      → config/, utils/
+```
+
+## 🤔 ¿Cómo saber qué estructura usar?
+
+### 1. **Empieza Simple**
+```python
+# Proyecto pequeño
+my_app.py  # Todo en un archivo
+
+# Crece a:
+main.py
+models.py
+routes.py
+```
+
+### 2. **Refactoriza cuando duela**
+```python
+# Cuando models.py tiene 500+ líneas:
+models/
+├── user.py
+├── pet.py
+└── __init__.py
+```
+
+### 3. **Sigue el Principio de "Screaming Architecture"**
+La estructura debe "gritar" qué hace tu app:
+```
+petcare/
+├── pets/        # ¡Ah! Maneja mascotas
+├── users/       # ¡Ah! Tiene usuarios
+├── medical/     # ¡Ah! Info médica
+```
+
+## 📖 Otras Estructuras Comunes
+
+### 1. **Por Feature (Feature-First)**
+```
+features/
+├── auth/
+│   ├── models.py
+│   ├── routes.py
+│   ├── services.py
+│   └── schemas.py
+├── pets/
+│   ├── models.py
+│   ├── routes.py
+│   └── services.py
+```
+
+### 2. **Hexagonal Architecture**
+```
+src/
+├── domain/         # Lógica de negocio pura
+├── application/    # Casos de uso
+├── infrastructure/ # DB, APIs externas
+└── adapters/       # Controllers, presenters
+```
+
+### 3. **Vertical Slice**
+```
+slices/
+├── create_user/
+│   ├── handler.py
+│   ├── validator.py
+│   └── repository.py
+├── update_pet/
+│   ├── handler.py
+│   └── repository.py
+```
+
+## 🎯 ¿Cuándo usar cada estructura?
+
+### **Tu estructura actual es buena para:**
+- ✅ APIs REST medianas a grandes
+- ✅ Equipos de 2-10 desarrolladores
+- ✅ Cuando tienes modelos compartidos
+- ✅ CRUD con lógica de negocio
+
+### **Feature-First es mejor para:**
+- ✅ Microservicios
+- ✅ Equipos grandes (10+)
+- ✅ Cuando cada feature es independiente
+
+### **Monolito simple para:**
+- ✅ MVPs
+- ✅ Proyectos personales
+- ✅ < 10 endpoints
+
+## 💡 Principios para Decidir
+
+### 1. **YAGNI (You Aren't Gonna Need It)**
+No sobre-arquitectures desde el inicio:
+```python
+# Mal: Para un TODO app
+enterprise_todo/
+├── domain/
+│   ├── entities/
+│   ├── value_objects/
+│   └── aggregates/
+├── application/
+│   ├── commands/
+│   └── queries/
+
+# Bien:
+todo_app/
+├── main.py
+├── models.py
+└── routes.py
+```
+
+### 2. **Convention over Configuration**
+Sigue las convenciones del framework/comunidad:
+- FastAPI → models/, routers/, schemas/
+- Django → apps con models.py, views.py
+- Flask → blueprints
+
+### 3. **Evolución Natural**
+```
+v1: todo.py (100 líneas)
+    ↓
+v2: main.py + models.py + routes.py
+    ↓
+v3: models/ + routes/ + services/
+    ↓
+v4: Feature folders si crece mucho
+```
+
+## 🔍 Señales para Refactorizar
+
+1. **Archivos muy grandes** (>300 líneas)
+2. **Imports circulares**
+3. **Dificultad para encontrar código**
+4. **Muchos conflictos en git**
+5. **Tests difíciles de escribir**

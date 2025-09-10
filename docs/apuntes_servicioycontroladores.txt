@@ -1,0 +1,285 @@
+## 🎯 Routers (Controllers) vs Services: División de Responsabilidades
+
+Te explicaré con ejemplos prácticos de tu proyecto PetCare:
+
+## 📍 **Routers (Controllers)**
+
+### ¿Qué son?
+Los **routers** son el punto de entrada HTTP de tu API. Manejan:
+- 🔗 Rutas/endpoints
+- 📥 Request/Response HTTP
+- ✅ Validación de entrada (con Pydantic)
+- 🔐 Autenticación/Autorización
+- 📤 Códigos de estado HTTP
+
+### 📍 **Router (Controller) - `routers/pet.py`**
+
+#### Responsabilidades del Router:
+
+1. **Definir endpoints HTTP**:
+```python
+@pet_router.post("/")     # POST /api/pets/
+@pet_router.get("/{id}")  # GET /api/pets/123
+```
+
+2. **Manejar autenticación**:
+```python
+dependencies=[Depends(JWTBearer())]  # Requiere token JWT
+user_id = request.state.user_id      # Obtiene usuario autenticado
+```
+
+3. **Validar permisos**:
+```python
+if pet.user_id != user_id:
+    raise HTTPException(status_code=403, detail="No tienes permiso")
+```
+
+4. **Transformar HTTP ↔ Python**:
+```python
+# Entrada: JSON → Pydantic model
+def create_pet(pet: PetCreate, ...):  
+
+# Salida: Pydantic model → JSON
+response_model=PetResponse
+```
+
+5. **Manejar errores HTTP**:
+```python
+raise HTTPException(status_code=404, detail="Mascota no encontrada")
+```
+
+### 🛠️ **Service - `services/pet.py`**
+
+#### Responsabilidades del Service:
+
+1. **Lógica de negocio pura**:
+```python
+def create_pet(self, pet_data: PetCreate, user_id: int) -> PetModel:
+    # Solo se enfoca en crear la mascota, no sabe de HTTP
+```
+
+2. **Interacción con la base de datos**:
+```python
+self.db.query(PetModel).filter(PetModel.id == pet_id).first()
+self.db.add(new_pet)
+self.db.commit()
+```
+
+3. **Manejo de transacciones**:
+```python
+try:
+    self.db.commit()
+except Exception:
+    self.db.rollback()
+```
+
+4. **No conoce HTTP**:
+- No hay `HTTPException`
+- No hay status codes
+- No hay `Request`/`Response`
+
+## 🎭 Ejemplo Práctico: Crear una Mascota
+
+### Flujo completo:
+
+```python
+# 1️⃣ Cliente envía:
+POST /api/pets/
+{
+    "name": "Max",
+    "breed": "Labrador",
+    "birth": "2020-01-01"
+}
+
+# 2️⃣ Router recibe:
+@pet_router.post("/", dependencies=[Depends(JWTBearer())])
+def create_pet(pet: PetCreate, request: Request, db: Session = Depends(get_db)):
+    # Valida token JWT ✓
+    # Parsea JSON a PetCreate ✓
+    # Obtiene user_id del token ✓
+    
+    user_id = request.state.user_id
+    pet_service = PetService(db)
+    
+    # 3️⃣ Delega al Service
+    new_pet = pet_service.create_pet(pet, user_id)
+    
+    # 4️⃣ Retorna respuesta HTTP
+    return new_pet  # FastAPI convierte a JSON
+
+# 5️⃣ Service ejecuta:
+def create_pet(self, pet_data: PetCreate, user_id: int):
+    # Solo lógica de negocio
+    pet_dict = vars(pet_data)
+    pet_dict["user_id"] = user_id
+    
+    new_pet = PetModel(**pet_dict)
+    self.db.add(new_pet)
+    self.db.commit()
+    return new_pet
+```
+
+## 🤔 ¿Por qué separar Router y Service?
+
+### 1. **Testabilidad**
+```python
+# Test del Service (sin HTTP)
+def test_create_pet():
+    db = MockDatabase()
+    service = PetService(db)
+    pet = service.create_pet(PetCreate(name="Max"), user_id=1)
+    assert pet.name == "Max"
+
+# Test del Router (sin lógica de negocio)
+def test_create_pet_endpoint():
+    response = client.post("/api/pets/", json={...})
+    assert response.status_code == 201
+```
+
+### 2. **Reusabilidad**
+```python
+# Puedes usar el service desde:
+# - CLI commands
+# - Background tasks
+# - WebSockets
+# - Otro router
+
+# Ejemplo: Comando CLI
+def import_pets_from_csv():
+    service = PetService(db)
+    for row in csv_reader:
+        service.create_pet(...)  # Sin HTTP!
+```
+
+### 3. **Cambios independientes**
+```python
+# Cambiar de REST a GraphQL
+# Solo cambias routers, services intactos
+
+# Cambiar reglas de negocio
+# Solo cambias services, routers intactos
+```
+
+## 📊 Comparación Visual
+
+| Aspecto | Router | Service |
+|---------|---------|---------|
+| **Conoce HTTP** | ✅ Sí | ❌ No |
+| **Maneja autenticación** | ✅ Sí | ❌ No |
+| **Lógica de negocio** | ❌ No | ✅ Sí |
+| **Acceso a BD** | ❌ No (via service) | ✅ Sí |
+| **Validación entrada** | ✅ Pydantic | ❌ Asume válido |
+| **Errores** | HTTPException | Exception/None |
+| **Testing** | Integration tests | Unit tests |
+
+## 🚫 Anti-patrones a evitar
+
+### ❌ Lógica de negocio en Router:
+```python
+# MAL
+@pet_router.post("/")
+def create_pet(pet: PetCreate, db: Session = Depends(get_db)):
+    # ❌ Lógica de negocio en el router
+    if pet.age > 20:
+        raise HTTPException(400, "Mascota muy vieja")
+    
+    # ❌ SQL directo en router
+    db.execute("INSERT INTO pets...")
+```
+
+### ❌ HTTP en Service:
+```python
+# MAL
+class PetService:
+    def create_pet(self, pet_data):
+        if not pet_data.name:
+            # ❌ Service no debe conocer HTTP
+            raise HTTPException(400, "Nombre requerido")
+```
+
+### ✅ Forma correcta:
+```python
+# Router
+@pet_router.post("/")
+def create_pet(pet: PetCreate, ...):
+    try:
+        return pet_service.create_pet(pet)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+# Service
+def create_pet(self, pet_data):
+    if not self._is_valid_age(pet_data.age):
+        raise ValueError("Edad inválida")
+    # Lógica de negocio...
+```
+
+## 🎯 Regla de oro
+
+> **Router**: "¿Cómo se comunica?"  
+> **Service**: "¿Qué hace?"
+
+Si tu código responde "¿cómo?", va en el router.  
+Si responde "¿qué?", va en el service.
+
+¡Exactamente! 🎯 Has captado perfectamente la esencia de la separación de responsabilidades.
+
+## 🌸 Ejemplo con tu tienda de flores:
+
+### 🛣️ **Router (Controller)** - "¿DÓNDE comprar?"
+```python
+@flower_router.post("/buy")  # ← Esta es la URL/dirección
+def buy_flowers(order: FlowerOrder, request: Request):
+    # Solo maneja la "entrada" de la tienda
+    user_id = request.state.user_id
+    
+    # Delega al service que sabe CÓMO comprar
+    result = flower_service.buy_flowers(order, user_id)
+    
+    return {"message": "Compra exitosa", "order_id": result.id}
+```
+
+### 🏪 **Service** - "¿CÓMO comprar?"
+```python
+class FlowerService:
+    def buy_flowers(self, order: FlowerOrder, user_id: int):
+        # Aquí está toda la lógica de negocio:
+        # - Verificar stock
+        # - Calcular precio con descuentos
+        # - Procesar pago
+        # - Actualizar inventario
+        # - Crear orden de entrega
+        
+        if not self._check_stock(order.flowers):
+            raise ValueError("Sin stock suficiente")
+        
+        total = self._calculate_price(order.flowers)
+        payment = self._process_payment(user_id, total)
+        
+        return self._create_order(order, user_id, payment)
+```
+
+## 🎭 Analogía perfecta:
+
+- **Router**: Es como el **mostrador** de la tienda
+  - Te recibe cuando llegas
+  - Toma tu pedido
+  - Te da la respuesta final
+
+- **Service**: Es como el **equipo de trabajo** detrás
+  - Prepara las flores
+  - Calcula precios
+  - Maneja el inventario
+  - Procesa pagos
+
+## 🔄 Flujo completo:
+
+```
+Cliente → POST /flowers/buy → Router → Service → Database
+                            ↓         ↓
+                     "¿Dónde?"   "¿Cómo?"
+                     (URL)       (Lógica)
+```
+
+**Router**: "Hola, vienes a `/flowers/buy`? Te paso con el service"  
+**Service**: "Ok, voy a verificar stock, calcular precio, procesar pago..."

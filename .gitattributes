@@ -1,0 +1,10 @@
+# Normaliza finales de línea a LF en el repo
+* text=auto eol=lf
+
+# Archivos que siempre deben ser binarios
+*.png binary
+*.jpg binary
+*.exe binary
+
+# Archivos que deben mantener CRLF (raro en Python, pero puede haber scripts de Windows)
+*.bat text eol=crlf

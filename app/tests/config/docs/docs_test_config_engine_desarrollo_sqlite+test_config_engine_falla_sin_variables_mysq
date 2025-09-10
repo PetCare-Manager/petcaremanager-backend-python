@@ -1,0 +1,442 @@
+# 📋 **DOCUMENTACIÓN TÉCNICA: Tests de DatabaseConfig Engine**
+
+## **📚 Índice**
+- [Introducción](#introducción)
+- [Test A: Desarrollo + SQLite](#test-a-desarrollo--sqlite)
+- [Test B: Validación de Errores](#test-b-validación-de-errores)
+- [Decisiones de Arquitectura](#decisiones-de-arquitectura)
+- [Patrones y Mejores Prácticas](#patrones-y-mejores-prácticas)
+
+---
+
+## **🎯 Introducción**
+
+### **Propósito**
+Estos tests validan el comportamiento del método `obtener_config_engine()` de la clase `DatabaseConfig`, asegurando que:
+- Configure correctamente diferentes entornos (desarrollo/producción)
+- Maneje adecuadamente diferentes backends (SQLite/MySQL)
+- Proporcione errores claros ante configuraciones inválidas
+
+### **Contexto del Sistema**
+La clase `DatabaseConfig` es responsable de:
+- Detectar el entorno de ejecución
+- Seleccionar el backend de base de datos apropiado
+- Configurar parámetros de conexión y pool
+- Validar configuraciones requeridas
+
+---
+
+## **🅰️ Test A: Desarrollo + SQLite**
+
+```python
+def test_config_engine_desarrollo_sqlite(monkeypatch):
+```
+
+### **🎯 Objetivo Principal**
+Verificar que en ambiente de **desarrollo con SQLite**, la configuración del engine sea mínima y apropiada para desarrollo local.
+
+### **📋 Casos de Uso Cubiertos**
+1. **Desarrollo local**: Desarrollador trabajando en su máquina
+2. **CI/CD pipelines**: Tests automatizados en entornos temporales
+3. **Prototipado rápido**: Configuración sin dependencias externas
+
+---
+
+### **📂 SECCIÓN 1: Preparación del Entorno**
+
+```python
+# ============ 1. Configuración del entorno ============
+monkeypatch.setenv("Entorno", "desarrollo")  # Forzar entorno desarrollo
+monkeypatch.setenv("USE_MYSQL", "false")     # Activar SQLite
+
+# Mockear variables obligatorias (el constructor las pide aunque no se usen)
+monkeypatch.setenv("MYSQL_USER", "test_user")
+monkeypatch.setenv("MYSQL_PASSWORD", "test_pass")
+monkeypatch.setenv("MYSQL_DATABASE", "test_db")
+
+# Opcional: Mockear DATABASE_URL para probar custom path
+monkeypatch.setenv("DATABASE_URL", "sqlite:///custom.db")
+```
+
+#### **🔍 Decisiones de Diseño**
+
+| Variable | Valor | Justificación |
+|----------|--------|---------------|
+| `Entorno` | `"desarrollo"` | **Aislamiento**: Fuerza el comportamiento específico de desarrollo, independiente del entorno real |
+| `USE_MYSQL` | `"false"` | **Backend Selection**: Explicita el uso de SQLite para este escenario |
+| `MYSQL_*` | valores dummy | **Compatibilidad**: El constructor valida estas variables aunque no se usen en SQLite |
+| `DATABASE_URL` | custom path | **Flexibilidad**: Verifica que respete configuraciones personalizadas |
+
+#### **💡 ¿Por qué estas variables?**
+
+**`Entorno="desarrollo"`**
+- **Problema**: Sin esto, el test dependería del entorno real
+- **Solución**: Garantiza comportamiento consistente
+- **Impacto**: `echo=True` en desarrollo vs `echo=False` en producción
+
+**`USE_MYSQL="false"`**  
+- **Problema**: Por defecto usa MySQL (`"true"`)
+- **Solución**: Fuerza el uso de SQLite
+- **Impacto**: Cambia completamente la lógica de configuración
+
+**Variables MySQL dummy**
+- **Problema**: El constructor las valida antes de decidir el backend
+- **Solución**: Proporciona valores válidos para pasar la validación
+- **Impacto**: Evita `MissingConfigurationError` prematuro
+
+---
+
+### **⚙️ SECCIÓN 2: Ejecución**
+
+```python
+# ============ 2. Ejecución ============
+config = DatabaseConfig()
+engine_config = config.obtener_config_engine()
+conexion_url = config.obtener_conexion_url()
+```
+
+#### **🔍 Decisiones de Diseño**
+
+**`DatabaseConfig()` sin parámetros**
+- **Justificación**: Usa el comportamiento por defecto (carga .env)
+- **Alternativa**: `cargar_dotenv=False` (usado en otros tests)
+- **Razón**: Este test verifica el flujo normal de la aplicación
+
+**Llamadas separadas a métodos**
+- **Justificación**: Permite verificar cada aspecto independientemente
+- **Beneficio**: Errores más específicos si algo falla
+- **Pattern**: Arrange-Act-Assert claramente separado
+
+---
+
+### **✅ SECCIÓN 3: Verificaciones Principales**
+
+```python
+# ============ 3. Verificaciones PRINCIPALES ============
+# A) Configuración del engine
+assert engine_config == {"echo": True}, (
+    f"CONFIG_ERROR: En SQLite, la configuración debe ser {{'echo': True}}. "
+    f"Se obtuvo: {engine_config}. ¿Hay keys de MySQL?"
+)
+```
+
+#### **🔍 Decisión de Diseño: Configuración Mínima**
+
+**¿Por qué solo `{"echo": True}`?**
+
+| Aspecto | SQLite | MySQL | Justificación |
+|---------|--------|--------|---------------|
+| **Pool de conexiones** | ❌ No necesario | ✅ Requerido | SQLite es single-threaded por archivo |
+| **Connection timeout** | ❌ No aplicable | ✅ Necesario | SQLite no tiene timeouts de red |
+| **Pool recycle** | ❌ Innecesario | ✅ Importante | SQLite no tiene conexiones persistentes |
+| **Echo (debugging)** | ✅ Útil en desarrollo | ✅ Útil en desarrollo | Facilita debugging |
+
+**Mensaje de error detallado**
+- **Problema**: `assert` simples dan errores crípticos
+- **Solución**: Mensajes explicativos con contexto
+- **Beneficio**: Debugging más rápido para desarrolladores
+
+---
+
+### **🌐 SECCIÓN 4: Verificaciones de URL**
+
+```python
+# B) URL de conexión
+assert conexion_url.startswith("sqlite:///"), (
+    f"URL_ERROR: Debe empezar con 'sqlite:///'. URL obtenida: {conexion_url}"
+)
+assert "custom.db" in conexion_url, (
+    f"URL_CUSTOM_ERROR: Debe usar DATABASE_URL mockeada. URL: {conexion_url}"
+)
+```
+
+#### **🔍 Decisiones de Diseño**
+
+**Verificación de protocolo**
+- **`startswith("sqlite:///")`**: Garantiza que no sea MySQL por error
+- **Alternativa**: Regex más complejo
+- **Justificación**: Simple y efectivo para el caso
+
+**Verificación de archivo específico**
+- **`"custom.db" in conexion_url`**: Confirma que respeta `DATABASE_URL`
+- **Importancia**: Demuestra que la configuración personalizada funciona
+- **Edge case**: Sin esto, podría usar archivo por defecto silenciosamente
+
+---
+
+### **🔬 SECCIÓN 5: Verificaciones Avanzadas**
+
+```python
+# ============ 4. Verificaciones SECUNDARIAS (pero importantes) ============
+# C) ¿Las keys de pool están ausentes?
+pool_keys = ["pool_size", "max_overflow", "pool_timeout", "pool_recycle"]
+for key in pool_keys:
+    assert key not in engine_config, (
+        f"POOL_ERROR: Key '{key}' no debe estar en SQLite. Config: {engine_config}"
+    )
+```
+
+#### **🔍 Decisión: Verificación Negativa**
+
+**¿Por qué verificar que NO estén presentes?**
+- **Problema potencial**: Código podría agregar configuraciones innecesarias
+- **Impacto**: SQLAlchemy ignora configuraciones no aplicables, pero indica error lógico
+- **Beneficio**: Detecta regresiones en la lógica de configuración
+
+**Lista explícita de keys**
+- **Alternativa**: Verificar tamaño del diccionario
+- **Ventaja**: Más específico sobre qué no debe estar
+- **Mantenibilidad**: Fácil agregar nuevas keys a verificar
+
+---
+
+## **🅱️ Test B: Validación de Errores**
+
+```python
+def test_config_engine_falla_sin_variables_mysql(monkeypatch):
+```
+
+### **🎯 Objetivo Principal**
+Verificar que el sistema **falle rápido y claro** cuando faltan configuraciones críticas, siguiendo el principio "fail fast, fail clear".
+
+### **📋 Casos de Uso Cubiertos**
+1. **Configuración incompleta**: .env mal configurado
+2. **Deploy fallido**: Variables de entorno faltantes
+3. **Developer experience**: Errores claros para nuevos desarrolladores
+
+---
+
+### **🧹 SECCIÓN 1: Limpieza del Entorno**
+
+```python
+# ============ 1. LIMPIAR variables existentes del .env ============
+# IMPORTANTE: Eliminar las variables que podrían venir del .env
+monkeypatch.delenv("MYSQL_USER", raising=False)
+monkeypatch.delenv("MYSQL_PASSWORD", raising=False)  
+monkeypatch.delenv("MYSQL_DATABASE", raising=False)
+monkeypatch.delenv("Entorno", raising=False)
+```
+
+#### **🔍 Decisiones de Diseño Críticas**
+
+**¿Por qué `delenv` antes de `setenv`?**
+
+| Sin limpieza | Con limpieza |
+|--------------|--------------|
+| ❌ Test usa variables del .env real | ✅ Test controla completamente el entorno |
+| ❌ Resultados inconsistentes | ✅ Resultados predecibles |
+| ❌ Falsos positivos | ✅ Detección real de errores |
+
+**`raising=False` - Decisión de robustez**
+- **Problema**: Si la variable no existe, `delenv` falla
+- **Solución**: `raising=False` significa "si no existe, no importa"
+- **Beneficio**: Test robusto ante diferentes estados iniciales
+
+**Limpieza de `Entorno` también**
+- **Justificación**: Control total del entorno de prueba
+- **Beneficio**: Evita interferencia de configuraciones externas
+
+---
+
+### **⚙️ SECCIÓN 2: Configuración Mínima**
+
+```python
+# ============ 2. Configurar entorno SIN variables MySQL ============
+monkeypatch.setenv("Entorno", "desarrollo")
+# NO seteamos MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE
+```
+
+#### **🔍 Decisión: Configuración Parcial Intencional**
+
+**¿Por qué solo `Entorno`?**
+- **Necesario**: El código necesita saber el entorno para funcionar
+- **Insuficiente**: Intencionalmente omite credenciales MySQL
+- **Objetivo**: Crear el escenario de error específico que queremos probar
+
+---
+
+### **🔍 SECCIÓN 3: Debug y Transparencia**
+
+```python
+# ============ DEBUG: Verificar estado del entorno ============
+print(f"\n=== DEBUG DESPUÉS DE LIMPIAR ===")
+print(f"MYSQL_USER en entorno: {os.environ.get('MYSQL_USER')}")
+print(f"MYSQL_PASSWORD en entorno: {os.environ.get('MYSQL_PASSWORD')}")
+print(f"MYSQL_DATABASE en entorno: {os.environ.get('MYSQL_DATABASE')}")
+print(f"Entorno: {os.environ.get('Entorno')}")
+```
+
+#### **🔍 Decisión: Debugging Explícito**
+
+**¿Por qué prints en tests?**
+
+| Pros | Contras |
+|------|---------|
+| ✅ **Debugging**: Facilita identificar problemas | ❌ **Ruido**: Output adicional en logs |
+| ✅ **Transparencia**: Muestra el estado real | ❌ **Mantenimiento**: Hay que limpiar después |
+| ✅ **Educativo**: Ayuda a entender el flujo | ❌ **Performance**: Overhead mínimo |
+
+**¿Cuándo usar?**
+- ✅ **En tests complejos** como este
+- ✅ **Cuando el comportamiento no es obvio**
+- ❌ **En tests simples y directos**
+
+---
+
+### **💥 SECCIÓN 4: Verificación de Error**
+
+```python
+# ============ 3. Intentar crear DatabaseConfig (debe fallar) ============
+try:
+    # CLAVE: cargar_dotenv=False evita que lea el archivo .env
+    config = DatabaseConfig(cargar_dotenv=False)  # ← Ahora SÍ debe fallar
+    print(f"\n=== PROBLEMA: DatabaseConfig se creó sin error ===")
+    print(f"config.config: {config.config}")
+    # Si llegamos aquí, algo está mal
+    assert False, "DatabaseConfig() debería haber fallado pero no falló"
+except MissingConfigurationError as e:
+    print(f"\n=== ÉXITO: MissingConfigurationError lanzada ===")
+    print(f"Error: {e}")
+    # Verificar que el error contiene las variables faltantes
+    error_message = str(e)
+    assert 'MYSQL_USER' in error_message, f"Error debe mencionar MYSQL_USER: {error_message}"
+    assert 'MYSQL_PASSWORD' in error_message, f"Error debe mencionar MYSQL_PASSWORD: {error_message}"
+    assert 'MYSQL_DATABASE' in error_message, f"Error debe mencionar MYSQL_DATABASE: {error_message}"
+```
+
+#### **🔍 Decisiones de Diseño Complejas**
+
+**`cargar_dotenv=False` - Decisión Crítica**
+
+| Con `cargar_dotenv=True` | Con `cargar_dotenv=False` |
+|--------------------------|---------------------------|
+| ❌ Carga variables del .env | ✅ Solo usa variables de entorno |
+| ❌ Test pasa incorrectamente | ✅ Test falla como esperamos |
+| ❌ No prueba el caso real | ✅ Simula configuración incompleta |
+
+**Try/Except Pattern - Verificación de Excepción**
+
+```python
+try:
+    # Código que debe fallar
+    config = DatabaseConfig(cargar_dotenv=False)
+    assert False, "No debería llegar aquí"  # ← Fuerza fallo si no hay excepción
+except MissingConfigurationError as e:
+    # Verificar que el error sea el correcto
+    assert 'MYSQL_USER' in str(e)
+```
+
+**¿Por qué este patrón en lugar de `pytest.raises`?**
+
+| `try/except` manual | `pytest.raises` |
+|---------------------|-----------------|
+| ✅ **Control**: Puedes hacer prints de debug | ❌ **Limitado**: Solo verifica que la excepción ocurra |
+| ✅ **Flexibilidad**: Verificaciones complejas del error | ❌ **Simple**: Verificaciones básicas |
+| ✅ **Educativo**: Muestra el flujo completo | ❌ **Abstracto**: Oculta el mecanismo |
+
+---
+
+## **🏗️ Decisiones de Arquitectura**
+
+### **🎯 Principios Aplicados**
+
+#### **1. Test Isolation (Aislamiento)**
+```python
+# ❌ MALO: Test depende del entorno
+def test_malo():
+    config = DatabaseConfig()  # ¿Qué entorno? ¿Qué variables?
+    
+# ✅ BUENO: Test controla su entorno
+def test_bueno(monkeypatch):
+    monkeypatch.setenv("Entorno", "desarrollo")
+    config = DatabaseConfig()
+```
+
+#### **2. Fail Fast, Fail Clear**
+```python
+# ❌ MALO: Error críptico
+assert config.obtener_config_engine() == {"echo": True}
+
+# ✅ BUENO: Error descriptivo
+assert config.obtener_config_engine() == {"echo": True}, (
+    f"CONFIG_ERROR: En SQLite, la configuración debe ser {{'echo': True}}. "
+    f"Se obtuvo: {config.obtener_config_engine()}. ¿Hay keys de MySQL?"
+)
+```
+
+#### **3. Positive and Negative Testing**
+```python
+# ✅ Test positivo: Verifica que funcione
+assert engine_config == {"echo": True}
+
+# ✅ Test negativo: Verifica que NO tenga cosas incorrectas
+assert key not in engine_config for key in pool_keys
+```
+
+---
+
+### **🔧 Patrones de Testing**
+
+#### **1. Arrange-Act-Assert (AAA)**
+```python
+def test_example(monkeypatch):
+    # ============ ARRANGE ============
+    monkeypatch.setenv("Entorno", "desarrollo")
+    
+    # ============ ACT ============
+    config = DatabaseConfig()
+    result = config.obtener_config_engine()
+    
+    # ============ ASSERT ============
+    assert result == {"echo": True}
+```
+
+#### **2. Given-When-Then (Behavior-Driven)**
+```python
+def test_config_engine_desarrollo_sqlite(monkeypatch):
+    """
+    GIVEN: Un entorno de desarrollo configurado para SQLite
+    WHEN: Se crea la configuración del engine
+    THEN: Debe retornar configuración mínima con echo=True
+    """
+```
+
+#### **3. Test Data Builders**
+```python
+# Patrón implícito: construir datos de test específicos
+monkeypatch.setenv("MYSQL_USER", "test_user")      # ← No credenciales reales
+monkeypatch.setenv("DATABASE_URL", "sqlite:///custom.db")  # ← Path controlado
+```
+
+---
+
+## **📊 Matriz de Cobertura**
+
+| Escenario               | Test A  | Test B | Justificación                     |
+|-------------------------|-------- |--------------------------------------------|
+| **Desarrollo + SQLite** | ✅     | ❌    | Caso principal de desarrollo local |
+| **Variables faltantes** | ❌     | ✅    | Manejo de errores de configuración |
+| **Configuración custom**| ✅     | ❌    | Flexibilidad de configuración      |
+| **Error messages**      | ❌     | ✅    | Developer experience               |
+| **Backend selection**   | ✅     | ❌    | Lógica de selección SQLite vs MySQL|
+
+---
+
+## **🎯 Mejores Prácticas Implementadas**
+
+### **✅ DO's (Qué SÍ hacer)**
+
+1. **Aislamiento completo**: Cada test controla su entorno
+2. **Mensajes descriptivos**: Errores que ayudan al debugging
+3. **Verificaciones específicas**: Assert exacto sobre lo que importa
+4. **Documentación**: Docstrings explicando el propósito
+5. **Edge cases**: Probar tanto casos felices como de error
+
+### **❌ DON'Ts (Qué NO hacer)**
+
+1. **Dependencias externas**: No depender de archivos .env reales
+2. **Asserts vagos**: Evitar mensajes de error poco útiles
+3. **Tests acoplados**: Un test no debe afectar a otro
+4. **Hardcoding**: Evitar valores mágicos sin explicación
+5. **Tests silenciosos**: En casos complejos, agregar debugging
+

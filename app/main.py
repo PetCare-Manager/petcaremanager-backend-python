@@ -34,4 +34,70 @@ def health_check():
     """Health Check"""
     return {"status": "ok"}
 
-Base.metadata.create_all(bind=engine)
+import os
+from config.database_config import database_config
+from config.enums import Entorno
+
+# Solo crear tablas en desarrollo local con SQLite
+config = database_config()
+if config.obtener_entorno() == Entorno.DESARROLLO and not os.getenv("USE_MYSQL", "true").lower() == "true":
+    Base.metadata.create_all(bind=engine)
+    print("📊 Tablas SQLite creadas (modo desarrollo)")
+else:
+    print("🐬 Usando MySQL - Las tablas ya deben existir")
+
+
+"""
+Desarrollo para cambiar de SQLite a MySQL
+1. Configurar la conexión a la base de datos para que sea dinámica
+Usa variables de entorno para que el código detecte si está en local (SQLite) o en producción (MySQL en PythonAnywhere).
+
+Ejemplo en Python (usando SQLAlchemy como referencia):
+
+python
+Copiar
+Editar
+import os
+
+if os.getenv('PYTHONANYWHERE'):
+    DB_USER = os.getenv('MYSQL_USER')
+    DB_PASS = os.getenv('MYSQL_PASSWORD')
+    DB_HOST = os.getenv('MYSQL_HOST')
+    DB_NAME = os.getenv('MYSQL_DATABASE')
+
+    DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}"
+else:
+    DATABASE_URL = "sqlite:///./test.db"  # Desarrollo local
+Luego usas DATABASE_URL para la conexión de tu ORM o driver.
+
+2. Eliminar cualquier código que cree o use explícitamente test.db
+Revisa que no haya código que fuerce la creación de SQLite.
+
+Usa siempre la conexión configurada por variable de entorno.
+
+3. Adaptar modelos y consultas para MySQL
+Revisa tipos de datos, sintaxis y comportamientos SQL específicos.
+
+Ajusta migraciones si usas algún framework (como Alembic).
+
+4. Configurar entorno local para desarrollo
+Localmente, dejar SQLite activo para desarrollo rápido y sencillo.
+
+Puedes usar un flag o la variable PYTHONANYWHERE=1 para cambiar el entorno.
+
+5. Configurar entorno de producción (PythonAnywhere y Docker)
+Forzar el uso de MySQL a través de variables de entorno.
+
+6. Testing
+En pruebas unitarias y de integración, usar base de datos en memoria o mock para evitar usar SQLite o MySQL real.
+
+Evitar crear o escribir en test.db.
+
+7. Verificar que la aplicación:
+Se conecta correctamente a MySQL en producción.
+
+No utiliza SQLite ni genera archivos test.db.
+
+Funciona igual o mejor con MySQL.
+
+"""

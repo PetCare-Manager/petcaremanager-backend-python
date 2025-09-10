@@ -1,5 +1,9 @@
 # PetCareManager Backend
 
+
+# Steps
+
+
 ## Requirements
 - make
 - docker
@@ -19,3 +23,10 @@
     make urls
     ~~~
 
+
+export MYSQL_USER=petcaremysql2
+export MYSQL_PASSWORD=TU_CONTRASEÑA
+export MYSQL_DATABASE=petcaremysql2
+export MYSQL_HOST=petcaremysql2.mysql.pythonanywhere-services.com
+export PYTHONANYWHERE=true
+export Entorno=desarrollo
